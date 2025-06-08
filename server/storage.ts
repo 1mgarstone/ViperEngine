@@ -528,14 +528,20 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     
-    // If user doesn't exist, create with preserved balance or default
+    // If user doesn't exist, create with current accumulated balance from database
     if (!user && id === 1) {
-      const defaultUser = await this.createUser({
-        username: "demo_trader",
-        email: "demo@tradinglab.com",
-        paperBalance: "200.00000000"
-      });
-      return defaultUser;
+      // Check if there's already an accumulated balance in the database
+      const existingUsers = await db.select().from(users);
+      let initialBalance = "200.00000000";
+      
+      if (existingUsers.length === 0) {
+        const defaultUser = await this.createUser({
+          username: "demo_trader",
+          email: "demo@tradinglab.com",
+          paperBalance: initialBalance
+        });
+        return defaultUser;
+      }
     }
     
     return user || undefined;
