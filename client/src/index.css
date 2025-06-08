@@ -101,6 +101,58 @@ input, textarea, [contenteditable], button, a {
   --trading-blue: hsl(212, 72%, 59%);
 }
 
+/* Mobile optimizations and swipe gestures */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.swipe-container {
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.swipe-feedback {
+  transition: transform 0.1s ease-out;
+  will-change: transform;
+}
+
+/* Enhanced touch targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Improved button animations */
+.btn-bounce {
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-bounce:active {
+  transform: scale(0.95);
+}
+
+/* Smooth navigation transitions */
+.nav-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Backdrop blur support */
+.backdrop-blur-fallback {
+  background-color: rgba(31, 41, 55, 0.9);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  .backdrop-blur-fallback {
+    backdrop-filter: blur(8px);
+    background-color: rgba(31, 41, 55, 0.8);
+  }
+}
+
 .dark {
   --background: hsl(222, 84%, 5%);
   --foreground: hsl(210, 40%, 98%);
