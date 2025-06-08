@@ -879,6 +879,24 @@ export class ViperEngine {
     
     console.log(`💰 VIPER Strike: +$${guaranteedProfit.toFixed(2)} profit on ${selectedAsset}`);
     console.log(`💰 Balance: $${currentBalance.toFixed(2)} → $${parseFloat(newBalance).toFixed(2)}`);
+    
+    // Broadcast balance update via WebSocket for real-time UI updates
+    const wss = (global as any).wss;
+    if (wss?.clients) {
+      wss.clients.forEach((client: any) => {
+        if (client.readyState === 1) { // WebSocket.OPEN
+          client.send(JSON.stringify({
+            type: 'balance_update',
+            data: {
+              userId: this.userId,
+              newBalance: parseFloat(newBalance),
+              profit: guaranteedProfit,
+              trade: selectedAsset
+            }
+          }));
+        }
+      });
+    }
   }
 
   async processAutomatedTradingCycle(): Promise<void> {

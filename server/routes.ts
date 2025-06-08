@@ -23,6 +23,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize WebSocket server for real-time price updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
+  // Make WebSocket server globally accessible for VIPER engine notifications
+  (global as any).wss = wss;
+  
   wss.on('connection', (ws: WebSocket) => {
     console.log('Client connected to WebSocket');
     
