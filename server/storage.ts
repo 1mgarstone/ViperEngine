@@ -10,6 +10,8 @@ import {
   type LiquidationCluster, type InsertLiquidationCluster,
   type ViperTrade, type InsertViperTrade
 } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -510,4 +512,224 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async updateUserBalance(userId: number, newBalance: string): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({ paperBalance: newBalance })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async getAllAssets(): Promise<Asset[]> {
+    return await db.select().from(assets);
+  }
+
+  async getAsset(id: number): Promise<Asset | undefined> {
+    const [asset] = await db.select().from(assets).where(eq(assets.id, id));
+    return asset || undefined;
+  }
+
+  async getAssetBySymbol(symbol: string): Promise<Asset | undefined> {
+    const [asset] = await db.select().from(assets).where(eq(assets.symbol, symbol));
+    return asset || undefined;
+  }
+
+  async updateAssetPrice(id: number, price: string, change24h: string): Promise<Asset> {
+    const [asset] = await db
+      .update(assets)
+      .set({ currentPrice: price, change24h, updatedAt: new Date() })
+      .where(eq(assets.id, id))
+      .returning();
+    return asset;
+  }
+
+  async getPortfolioPositions(userId: number): Promise<PortfolioPosition[]> {
+    return await db.select().from(portfolioPositions).where(eq(portfolioPositions.userId, userId));
+  }
+
+  async getPortfolioPosition(userId: number, assetId: number): Promise<PortfolioPosition | undefined> {
+    const [position] = await db
+      .select()
+      .from(portfolioPositions)
+      .where(eq(portfolioPositions.userId, userId))
+      .where(eq(portfolioPositions.assetId, assetId));
+    return position || undefined;
+  }
+
+  async createPortfolioPosition(insertPosition: InsertPortfolioPosition): Promise<PortfolioPosition> {
+    const [position] = await db
+      .insert(portfolioPositions)
+      .values(insertPosition)
+      .returning();
+    return position;
+  }
+
+  async updatePortfolioPosition(id: number, quantity: string, averagePrice: string, totalInvested: string): Promise<PortfolioPosition> {
+    const [position] = await db
+      .update(portfolioPositions)
+      .set({ quantity, averagePrice, totalInvested, updatedAt: new Date() })
+      .where(eq(portfolioPositions.id, id))
+      .returning();
+    return position;
+  }
+
+  async deletePortfolioPosition(id: number): Promise<void> {
+    await db.delete(portfolioPositions).where(eq(portfolioPositions.id, id));
+  }
+
+  async createOrder(insertOrder: InsertOrder): Promise<Order> {
+    const [order] = await db
+      .insert(orders)
+      .values(insertOrder)
+      .returning();
+    return order;
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order || undefined;
+  }
+
+  async getUserOrders(userId: number): Promise<Order[]> {
+    return await db.select().from(orders).where(eq(orders.userId, userId));
+  }
+
+  async updateOrderStatus(id: number, status: string, filledAt?: Date): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ status, filledAt })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async createTrade(insertTrade: InsertTrade): Promise<Trade> {
+    const [trade] = await db
+      .insert(trades)
+      .values(insertTrade)
+      .returning();
+    return trade;
+  }
+
+  async getUserTrades(userId: number): Promise<Trade[]> {
+    return await db.select().from(trades).where(eq(trades.userId, userId));
+  }
+
+  async getRiskSettings(userId: number): Promise<RiskSettings | undefined> {
+    const [settings] = await db.select().from(riskSettings).where(eq(riskSettings.userId, userId));
+    return settings || undefined;
+  }
+
+  async updateRiskSettings(insertSettings: InsertRiskSettings): Promise<RiskSettings> {
+    const existing = await this.getRiskSettings(insertSettings.userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(riskSettings)
+        .set({ ...insertSettings, updatedAt: new Date() })
+        .where(eq(riskSettings.userId, insertSettings.userId))
+        .returning();
+      return updated;
+    } else {
+      const [newSettings] = await db
+        .insert(riskSettings)
+        .values(insertSettings)
+        .returning();
+      return newSettings;
+    }
+  }
+
+  async getViperSettings(userId: number): Promise<ViperSettings | undefined> {
+    const [settings] = await db.select().from(viperSettings).where(eq(viperSettings.userId, userId));
+    return settings || undefined;
+  }
+
+  async updateViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
+    const existing = await this.getViperSettings(insertSettings.userId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(viperSettings)
+        .set({ ...insertSettings, updatedAt: new Date() })
+        .where(eq(viperSettings.userId, insertSettings.userId))
+        .returning();
+      return updated;
+    } else {
+      const [newSettings] = await db
+        .insert(viperSettings)
+        .values(insertSettings)
+        .returning();
+      return newSettings;
+    }
+  }
+
+  async createLiquidationCluster(insertCluster: InsertLiquidationCluster): Promise<LiquidationCluster> {
+    const [cluster] = await db
+      .insert(liquidationClusters)
+      .values(insertCluster)
+      .returning();
+    return cluster;
+  }
+
+  async getUnprocessedClusters(): Promise<LiquidationCluster[]> {
+    return await db.select().from(liquidationClusters).where(eq(liquidationClusters.processed, false));
+  }
+
+  async markClusterProcessed(id: number): Promise<void> {
+    await db
+      .update(liquidationClusters)
+      .set({ processed: true })
+      .where(eq(liquidationClusters.id, id));
+  }
+
+  async createViperTrade(insertTrade: InsertViperTrade): Promise<ViperTrade> {
+    const [trade] = await db
+      .insert(viperTrades)
+      .values(insertTrade)
+      .returning();
+    return trade;
+  }
+
+  async getActiveViperTrades(userId: number): Promise<ViperTrade[]> {
+    return await db
+      .select()
+      .from(viperTrades)
+      .where(eq(viperTrades.userId, userId))
+      .where(eq(viperTrades.status, 'active'));
+  }
+
+  async getUserViperTrades(userId: number): Promise<ViperTrade[]> {
+    return await db.select().from(viperTrades).where(eq(viperTrades.userId, userId));
+  }
+
+  async updateViperTrade(id: number, updates: Partial<ViperTrade>): Promise<ViperTrade> {
+    const [trade] = await db
+      .update(viperTrades)
+      .set(updates)
+      .where(eq(viperTrades.id, id))
+      .returning();
+    return trade;
+  }
+}
+
+export const storage = new DatabaseStorage();
