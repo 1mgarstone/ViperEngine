@@ -364,8 +364,8 @@ export default function Dashboard() {
           
           <div className="flex items-center space-x-3">
             <div className="text-right">
-              <div className="text-xs text-gray-400">Portfolio</div>
-              <div className="font-mono text-sm text-green-400">$100K</div>
+              <div className="text-xs text-gray-400">Balance</div>
+              <div className="font-mono text-sm text-green-400">${currentBalance.toFixed(2)}</div>
             </div>
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
           </div>

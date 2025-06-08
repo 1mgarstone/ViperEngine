@@ -51,18 +51,18 @@ export class ViperEngine {
   async initialize(): Promise<void> {
     this.settings = await storage.getViperSettings(this.userId);
     if (!this.settings) {
-      // Create optimized default settings for maximum profitability
+      // Create optimized default settings for maximum profit scanning
       this.settings = await storage.updateViperSettings({
         userId: this.userId,
-        maxLeverage: 125,
-        volThreshold: "0.003",      // Lower threshold for more opportunities
-        strikeWindow: "0.250",      // Wider window for better capture
-        profitTarget: "3.50",       // Higher profit targets
-        stopLoss: "0.080",          // Tighter stops to preserve capital
-        clusterThreshold: "0.002",  // More sensitive cluster detection
-        positionScaling: "1.50",    // Aggressive position scaling
-        maxConcurrentTrades: 5,     // More simultaneous trades
-        balanceMultiplier: "3.00",  // Higher capital utilization
+        maxLeverage: 80,
+        volThreshold: "0.001",      // Ultra-low threshold for maximum opportunities
+        strikeWindow: "0.180",      // Faster window for rapid execution
+        profitTarget: "2.20",       // Lower targets for frequent wins
+        stopLoss: "0.050",          // Tighter stops for capital preservation
+        clusterThreshold: "0.0008", // Hyper-sensitive cluster detection
+        positionScaling: "2.20",    // Aggressive scaling for profit maximization
+        maxConcurrentTrades: 12,    // Maximum simultaneous trades
+        balanceMultiplier: "5.50",  // Maximum capital utilization
         isEnabled: true,            // Auto-enable for autonomous trading
       });
     }
@@ -87,11 +87,21 @@ export class ViperEngine {
     const support = this.findSupportLevels(priceHistory, currentPrice);
     const resistance = this.findResistanceLevels(priceHistory, currentPrice);
     
-    // Advanced entry signal calculation
-    const entrySignal = this.calculateEntrySignal(volatility, momentum, support, resistance);
-    const exitSignal = this.calculateExitSignal(currentPrice, support, resistance);
-    const riskScore = this.assessRiskLevel(volatility, momentum);
-    const opportunityRating = this.rateOpportunity(entrySignal, volatility.strength);
+    // Enhanced entry signal with profit-focused parameters (increased sensitivity)
+    const baseEntrySignal = this.calculateEntrySignal(volatility, momentum, support, resistance);
+    const entrySignal = Math.min(1.0, baseEntrySignal * 1.35); // 35% boost for more trades
+    
+    // Optimized exit signal for faster profit taking
+    const baseExitSignal = this.calculateExitSignal(currentPrice, support, resistance);
+    const exitSignal = Math.min(1.0, baseExitSignal * 1.25); // 25% faster exits
+    
+    // Lower risk assessment for more frequent trading (medium-low risk)
+    const baseRiskScore = this.assessRiskLevel(volatility, momentum);
+    const riskScore = Math.max(0.15, baseRiskScore * 0.65); // Reduce risk perception by 35%
+    
+    // Higher opportunity rating for increased trade frequency
+    const baseOpportunityRating = this.rateOpportunity(entrySignal, volatility.strength);
+    const opportunityRating = Math.min(1.0, baseOpportunityRating * 1.5); // 50% higher opportunity detection
     
     return {
       entrySignal,
