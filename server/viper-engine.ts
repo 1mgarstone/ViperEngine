@@ -48,6 +48,24 @@ export class ViperEngine {
     this.userId = userId;
   }
 
+  // Environment-aware balance management
+  private async getCurrentBalance(): Promise<number> {
+    const balance = await storage.getCurrentBalance(this.userId);
+    return parseFloat(balance);
+  }
+
+  private async updateBalance(newBalance: number): Promise<void> {
+    await storage.updateCurrentBalance(this.userId, newBalance.toFixed(8));
+  }
+
+  private async getUserEnvironment(): Promise<{ isLiveMode: boolean; exchangeConnected: boolean }> {
+    const user = await storage.getUser(this.userId);
+    return {
+      isLiveMode: user?.isLiveMode || false,
+      exchangeConnected: !!(user?.exchangeName && user?.apiKey)
+    };
+  }
+
   async initialize(): Promise<void> {
     this.settings = await storage.getViperSettings(this.userId) || null;
     if (!this.settings) {
@@ -923,7 +941,7 @@ export class ViperEngine {
     const user = await storage.getUser(this.userId);
     if (!user) return;
     
-    const currentBalance = parseFloat(await storage.getCurrentBalance(this.userId));
+    const currentBalance = await this.getCurrentBalance();
     
     // High-frequency micro-profit generation (smaller but more frequent)
     const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
@@ -968,8 +986,8 @@ export class ViperEngine {
     });
     
     // Update balance with micro-profit
-    const newBalance = (currentBalance + guaranteedMicroProfit).toFixed(8);
-    await storage.updateCurrentBalance(this.userId, newBalance);
+    const newBalance = currentBalance + guaranteedMicroProfit;
+    await this.updateBalance(newBalance);
     
     console.log(`⚡ Micro-Profit: +$${guaranteedMicroProfit.toFixed(2)} on ${selectedAsset} (${microLeverage}x)`);
     
