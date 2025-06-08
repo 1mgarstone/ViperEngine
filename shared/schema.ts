@@ -7,6 +7,12 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   paperBalance: decimal("paper_balance", { precision: 20, scale: 8 }).notNull().default("100000"),
+  liveBalance: decimal("live_balance", { precision: 20, scale: 8 }).notNull().default("0"),
+  isLiveMode: boolean("is_live_mode").notNull().default(false),
+  apiKey: text("api_key"), // Encrypted exchange API key
+  apiSecret: text("api_secret"), // Encrypted exchange API secret
+  apiPassphrase: text("api_passphrase"), // Encrypted passphrase for some exchanges
+  exchangeName: text("exchange_name"), // 'binance' | 'okx' | 'bybit' | 'coinbase'
   createdAt: timestamp("created_at").defaultNow(),
 });
 

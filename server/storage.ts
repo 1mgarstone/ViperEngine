@@ -69,6 +69,17 @@ export interface IStorage {
   updateWidget(id: number, updates: Partial<DashboardWidget>): Promise<DashboardWidget>;
   deleteWidget(id: number): Promise<void>;
   reorderWidgets(userId: number, widgetOrders: { id: number; position: number }[]): Promise<void>;
+
+  // Live trading operations
+  toggleLiveMode(userId: number, isLive: boolean): Promise<User>;
+  updateExchangeCredentials(userId: number, credentials: {
+    apiKey: string;
+    apiSecret: string;
+    apiPassphrase?: string;
+    exchangeName: string;
+  }): Promise<User>;
+  getCurrentBalance(userId: number): Promise<string>;
+  updateCurrentBalance(userId: number, balance: string): Promise<User>;
 }
 
 export class MemStorage implements IStorage {
@@ -81,6 +92,7 @@ export class MemStorage implements IStorage {
   private viperSettings: Map<number, ViperSettings> = new Map();
   private liquidationClusters: Map<number, LiquidationCluster> = new Map();
   private viperTrades: Map<number, ViperTrade> = new Map();
+  private dashboardWidgets: Map<number, DashboardWidget> = new Map();
   
   // Persistent storage tracking
   private static instance: MemStorage | null = null;
@@ -94,6 +106,7 @@ export class MemStorage implements IStorage {
   private currentViperSettingsId = 1;
   private currentClusterId = 1;
   private currentViperTradeId = 1;
+  private currentWidgetId = 1;
 
   constructor() {
     // Implement singleton pattern to prevent balance resets
@@ -114,6 +127,12 @@ export class MemStorage implements IStorage {
         username: "demo_trader",
         email: "demo@tradinglab.com",
         paperBalance: "200.00000000",
+        liveBalance: "0.00000000",
+        isLiveMode: false,
+        apiKey: null,
+        apiSecret: null,
+        apiPassphrase: null,
+        exchangeName: null,
         createdAt: new Date(),
       };
       this.users.set(1, defaultUser);
@@ -529,6 +548,57 @@ export class MemStorage implements IStorage {
     };
     this.viperTrades.set(id, updatedTrade);
     return updatedTrade;
+  }
+
+  // Dashboard widget operations
+  async getUserWidgets(userId: number): Promise<DashboardWidget[]> {
+    return Array.from(this.dashboardWidgets.values()).filter(widget => widget.userId === userId);
+  }
+
+  async createWidget(insertWidget: InsertDashboardWidget): Promise<DashboardWidget> {
+    const widget: DashboardWidget = {
+      id: this.currentWidgetId++,
+      ...insertWidget,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    this.dashboardWidgets.set(widget.id, widget);
+    return widget;
+  }
+
+  async updateWidget(id: number, updates: Partial<DashboardWidget>): Promise<DashboardWidget> {
+    const existingWidget = this.dashboardWidgets.get(id);
+    if (!existingWidget) {
+      throw new Error(`Widget with id ${id} not found`);
+    }
+
+    const updatedWidget: DashboardWidget = {
+      ...existingWidget,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    
+    this.dashboardWidgets.set(id, updatedWidget);
+    return updatedWidget;
+  }
+
+  async deleteWidget(id: number): Promise<void> {
+    this.dashboardWidgets.delete(id);
+  }
+
+  async reorderWidgets(userId: number, widgetOrders: { id: number; position: number }[]): Promise<void> {
+    for (const order of widgetOrders) {
+      const widget = this.dashboardWidgets.get(order.id);
+      if (widget && widget.userId === userId) {
+        const updatedWidget: DashboardWidget = {
+          ...widget,
+          position: order.position,
+          updatedAt: new Date(),
+        };
+        this.dashboardWidgets.set(order.id, updatedWidget);
+      }
+    }
   }
 }
 
