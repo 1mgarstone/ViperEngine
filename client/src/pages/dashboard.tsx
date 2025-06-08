@@ -88,7 +88,7 @@ export default function Dashboard() {
   };
   
   // WebSocket connection for real-time data
-  const { marketData, isConnected } = useWebSocket();
+  const { marketData, isConnected, liveBalance } = useWebSocket();
   
   // Fetch user data with live balance updates
   const { data: userData, refetch: refetchUserData } = useQuery({
@@ -131,8 +131,8 @@ export default function Dashboard() {
   const isViperRunning = viperStatus?.isRunning || false;
   const activeViperTrades = viperTrades?.filter((t: any) => t.status === 'open')?.length || 0;
   
-  // Use live balance from database - this is updated in real-time by VIPER engine
-  const currentBalance = parseFloat(userData?.paperBalance || "200.00");
+  // Use live balance from WebSocket for instant updates, fallback to database value
+  const currentBalance = liveBalance || parseFloat(userData?.paperBalance || "200.00");
   
   // Calculate total profits since starting at $200
   const totalProfit = currentBalance - 200;
