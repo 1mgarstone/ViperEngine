@@ -1,11 +1,14 @@
 import { 
-  users, assets, portfolioPositions, orders, trades, riskSettings,
+  users, assets, portfolioPositions, orders, trades, riskSettings, viperSettings, liquidationClusters, viperTrades,
   type User, type InsertUser,
   type Asset, type InsertAsset,
   type PortfolioPosition, type InsertPortfolioPosition,
   type Order, type InsertOrder,
   type Trade, type InsertTrade,
-  type RiskSettings, type InsertRiskSettings
+  type RiskSettings, type InsertRiskSettings,
+  type ViperSettings, type InsertViperSettings,
+  type LiquidationCluster, type InsertLiquidationCluster,
+  type ViperTrade, type InsertViperTrade
 } from "@shared/schema";
 
 export interface IStorage {
@@ -41,6 +44,21 @@ export interface IStorage {
   // Risk settings operations
   getRiskSettings(userId: number): Promise<RiskSettings | undefined>;
   updateRiskSettings(settings: InsertRiskSettings): Promise<RiskSettings>;
+
+  // Viper settings operations
+  getViperSettings(userId: number): Promise<ViperSettings | undefined>;
+  updateViperSettings(settings: InsertViperSettings): Promise<ViperSettings>;
+
+  // Liquidation cluster operations
+  createLiquidationCluster(cluster: InsertLiquidationCluster): Promise<LiquidationCluster>;
+  getUnprocessedClusters(): Promise<LiquidationCluster[]>;
+  markClusterProcessed(id: number): Promise<void>;
+
+  // Viper trade operations
+  createViperTrade(trade: InsertViperTrade): Promise<ViperTrade>;
+  getActiveViperTrades(userId: number): Promise<ViperTrade[]>;
+  getUserViperTrades(userId: number): Promise<ViperTrade[]>;
+  updateViperTrade(id: number, updates: Partial<ViperTrade>): Promise<ViperTrade>;
 }
 
 export class MemStorage implements IStorage {
@@ -50,6 +68,9 @@ export class MemStorage implements IStorage {
   private orders: Map<number, Order> = new Map();
   private trades: Map<number, Trade> = new Map();
   private riskSettings: Map<number, RiskSettings> = new Map();
+  private viperSettings: Map<number, ViperSettings> = new Map();
+  private liquidationClusters: Map<number, LiquidationCluster> = new Map();
+  private viperTrades: Map<number, ViperTrade> = new Map();
   
   private currentUserId = 1;
   private currentAssetId = 1;
@@ -57,6 +78,9 @@ export class MemStorage implements IStorage {
   private currentOrderId = 1;
   private currentTradeId = 1;
   private currentRiskId = 1;
+  private currentViperSettingsId = 1;
+  private currentClusterId = 1;
+  private currentViperTradeId = 1;
 
   constructor() {
     this.initializeDefaultData();
@@ -122,6 +146,25 @@ export class MemStorage implements IStorage {
     };
     this.riskSettings.set(1, defaultRiskSettings);
     this.currentRiskId = 2;
+
+    // Create default viper settings
+    const defaultViperSettings: ViperSettings = {
+      id: 1,
+      userId: 1,
+      maxLeverage: 125,
+      volThreshold: "0.00800",
+      strikeWindow: "0.170",
+      profitTarget: "2.00",
+      stopLoss: "0.100",
+      clusterThreshold: "0.00500",
+      positionScaling: "1.00",
+      maxConcurrentTrades: 2,
+      balanceMultiplier: "2.00",
+      isEnabled: false,
+      updatedAt: new Date(),
+    };
+    this.viperSettings.set(1, defaultViperSettings);
+    this.currentViperSettingsId = 2;
   }
 
   // User operations
@@ -136,8 +179,10 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
     const user: User = {
-      ...insertUser,
       id,
+      username: insertUser.username,
+      email: insertUser.email,
+      paperBalance: insertUser.paperBalance || "100000.00000000",
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -228,10 +273,18 @@ export class MemStorage implements IStorage {
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const id = this.currentOrderId++;
     const order: Order = {
-      ...insertOrder,
       id,
-      createdAt: new Date(),
+      userId: insertOrder.userId,
+      assetId: insertOrder.assetId,
+      type: insertOrder.type,
+      side: insertOrder.side,
+      quantity: insertOrder.quantity,
+      price: insertOrder.price || null,
+      status: insertOrder.status || "pending",
+      stopPrice: insertOrder.stopPrice || null,
+      takeProfitPrice: insertOrder.takeProfitPrice || null,
       filledAt: null,
+      createdAt: new Date(),
     };
     this.orders.set(id, order);
     return order;
@@ -264,8 +317,15 @@ export class MemStorage implements IStorage {
   async createTrade(insertTrade: InsertTrade): Promise<Trade> {
     const id = this.currentTradeId++;
     const trade: Trade = {
-      ...insertTrade,
       id,
+      userId: insertTrade.userId,
+      orderId: insertTrade.orderId,
+      assetId: insertTrade.assetId,
+      side: insertTrade.side,
+      quantity: insertTrade.quantity,
+      price: insertTrade.price,
+      total: insertTrade.total,
+      pnl: insertTrade.pnl || "0",
       executedAt: new Date(),
     };
     this.trades.set(id, trade);
@@ -291,19 +351,162 @@ export class MemStorage implements IStorage {
     );
 
     if (existing) {
-      const updated = { ...existing, ...insertSettings, updatedAt: new Date() };
+      const updated: RiskSettings = {
+        id: existing.id,
+        userId: insertSettings.userId,
+        maxPositionSize: insertSettings.maxPositionSize || existing.maxPositionSize,
+        stopLossPercentage: insertSettings.stopLossPercentage || existing.stopLossPercentage,
+        takeProfitPercentage: insertSettings.takeProfitPercentage || existing.takeProfitPercentage,
+        maxDailyLoss: insertSettings.maxDailyLoss || existing.maxDailyLoss,
+        updatedAt: new Date(),
+      };
       this.riskSettings.set(existing.id, updated);
       return updated;
     } else {
       const id = this.currentRiskId++;
       const newSettings: RiskSettings = {
-        ...insertSettings,
         id,
+        userId: insertSettings.userId,
+        maxPositionSize: insertSettings.maxPositionSize || "15.00",
+        stopLossPercentage: insertSettings.stopLossPercentage || "5.00",
+        takeProfitPercentage: insertSettings.takeProfitPercentage || "25.00",
+        maxDailyLoss: insertSettings.maxDailyLoss || "1000.00000000",
         updatedAt: new Date(),
       };
       this.riskSettings.set(id, newSettings);
       return newSettings;
     }
+  }
+
+  // Viper settings operations
+  async getViperSettings(userId: number): Promise<ViperSettings | undefined> {
+    return Array.from(this.viperSettings.values()).find(
+      settings => settings.userId === userId
+    );
+  }
+
+  async updateViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
+    const existing = Array.from(this.viperSettings.values()).find(
+      settings => settings.userId === insertSettings.userId
+    );
+
+    if (existing) {
+      const updated: ViperSettings = {
+        id: existing.id,
+        userId: insertSettings.userId,
+        maxLeverage: insertSettings.maxLeverage || existing.maxLeverage,
+        volThreshold: insertSettings.volThreshold || existing.volThreshold,
+        strikeWindow: insertSettings.strikeWindow || existing.strikeWindow,
+        profitTarget: insertSettings.profitTarget || existing.profitTarget,
+        stopLoss: insertSettings.stopLoss || existing.stopLoss,
+        clusterThreshold: insertSettings.clusterThreshold || existing.clusterThreshold,
+        positionScaling: insertSettings.positionScaling || existing.positionScaling,
+        maxConcurrentTrades: insertSettings.maxConcurrentTrades || existing.maxConcurrentTrades,
+        balanceMultiplier: insertSettings.balanceMultiplier || existing.balanceMultiplier,
+        isEnabled: insertSettings.isEnabled ?? existing.isEnabled,
+        updatedAt: new Date(),
+      };
+      this.viperSettings.set(existing.id, updated);
+      return updated;
+    } else {
+      const id = this.currentViperSettingsId++;
+      const newSettings: ViperSettings = {
+        id,
+        userId: insertSettings.userId,
+        maxLeverage: insertSettings.maxLeverage || 125,
+        volThreshold: insertSettings.volThreshold || "0.00800",
+        strikeWindow: insertSettings.strikeWindow || "0.170",
+        profitTarget: insertSettings.profitTarget || "2.00",
+        stopLoss: insertSettings.stopLoss || "0.100",
+        clusterThreshold: insertSettings.clusterThreshold || "0.00500",
+        positionScaling: insertSettings.positionScaling || "1.00",
+        maxConcurrentTrades: insertSettings.maxConcurrentTrades || 2,
+        balanceMultiplier: insertSettings.balanceMultiplier || "2.00",
+        isEnabled: insertSettings.isEnabled || false,
+        updatedAt: new Date(),
+      };
+      this.viperSettings.set(id, newSettings);
+      return newSettings;
+    }
+  }
+
+  // Liquidation cluster operations
+  async createLiquidationCluster(insertCluster: InsertLiquidationCluster): Promise<LiquidationCluster> {
+    const id = this.currentClusterId++;
+    const cluster: LiquidationCluster = {
+      id,
+      instId: insertCluster.instId,
+      price: insertCluster.price,
+      size: insertCluster.size,
+      side: insertCluster.side,
+      volume: insertCluster.volume,
+      processed: insertCluster.processed || false,
+      timestamp: new Date(),
+    };
+    this.liquidationClusters.set(id, cluster);
+    return cluster;
+  }
+
+  async getUnprocessedClusters(): Promise<LiquidationCluster[]> {
+    return Array.from(this.liquidationClusters.values())
+      .filter(cluster => !cluster.processed)
+      .sort((a, b) => (a.timestamp?.getTime() || 0) - (b.timestamp?.getTime() || 0));
+  }
+
+  async markClusterProcessed(id: number): Promise<void> {
+    const cluster = this.liquidationClusters.get(id);
+    if (cluster) {
+      const updated = { ...cluster, processed: true };
+      this.liquidationClusters.set(id, updated);
+    }
+  }
+
+  // Viper trade operations
+  async createViperTrade(insertTrade: InsertViperTrade): Promise<ViperTrade> {
+    const id = this.currentViperTradeId++;
+    const trade: ViperTrade = {
+      id,
+      userId: insertTrade.userId,
+      clusterId: insertTrade.clusterId || null,
+      instId: insertTrade.instId,
+      side: insertTrade.side,
+      entryPrice: insertTrade.entryPrice,
+      quantity: insertTrade.quantity,
+      leverage: insertTrade.leverage,
+      takeProfitPrice: insertTrade.takeProfitPrice || null,
+      stopLossPrice: insertTrade.stopLossPrice || null,
+      status: insertTrade.status || "active",
+      pnl: insertTrade.pnl || "0",
+      exitPrice: insertTrade.exitPrice || null,
+      entryTime: new Date(),
+      exitTime: null,
+    };
+    this.viperTrades.set(id, trade);
+    return trade;
+  }
+
+  async getActiveViperTrades(userId: number): Promise<ViperTrade[]> {
+    return Array.from(this.viperTrades.values())
+      .filter(trade => trade.userId === userId && trade.status === "active");
+  }
+
+  async getUserViperTrades(userId: number): Promise<ViperTrade[]> {
+    return Array.from(this.viperTrades.values())
+      .filter(trade => trade.userId === userId)
+      .sort((a, b) => (b.entryTime?.getTime() || 0) - (a.entryTime?.getTime() || 0));
+  }
+
+  async updateViperTrade(id: number, updates: Partial<ViperTrade>): Promise<ViperTrade> {
+    const trade = this.viperTrades.get(id);
+    if (!trade) throw new Error("Viper trade not found");
+    
+    const updatedTrade: ViperTrade = {
+      ...trade,
+      ...updates,
+      exitTime: updates.status === "completed" || updates.status === "stopped" ? new Date() : trade.exitTime,
+    };
+    this.viperTrades.set(id, updatedTrade);
+    return updatedTrade;
   }
 }
 
