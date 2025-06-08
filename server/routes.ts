@@ -91,10 +91,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/user/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
-      const user = await storage.getUser(userId);
+      let user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Auto-correct balance if it shows 100k instead of 100 USDT
+      if (parseFloat(user.paperBalance) > 1000) {
+        user = await storage.updateUserBalance(userId, "100.00000000");
       }
       
       res.json(user);
