@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Target, Shield, TrendingUp, Activity, AlertTriangle } from "lucide-react";
+import { Zap, Target, Shield, TrendingUp, Activity, AlertTriangle, Play, Square } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,6 +37,14 @@ interface ViperPerformance {
   winRate: number;
   totalTrades: number;
   activeTrades: number;
+}
+
+interface ViperStatus {
+  isRunning: boolean;
+  cycleCount: number;
+  lastExecution: number;
+  profitability: number;
+  successRate: number;
 }
 
 export function ViperStrategy({ userId }: ViperStrategyProps) {

@@ -348,6 +348,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // VIPER Autonomous Trading Controls
+  app.post("/api/viper-control/:action", async (req, res) => {
+    try {
+      const action = req.params.action;
+      
+      if (action === "start") {
+        globalViperEngine.startAutonomousTrading();
+        res.json({ 
+          success: true, 
+          message: "VIPER autonomous trading started",
+          state: globalViperEngine.getAutonomousState()
+        });
+      } else if (action === "stop") {
+        globalViperEngine.stopAutonomousTrading();
+        res.json({ 
+          success: true, 
+          message: "VIPER autonomous trading stopped",
+          state: globalViperEngine.getAutonomousState()
+        });
+      } else {
+        res.status(400).json({ message: "Invalid action. Use 'start' or 'stop'" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/viper-status", async (req, res) => {
+    try {
+      const state = globalViperEngine.getAutonomousState();
+      res.json(state);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });;
+
   // Helper function to process market orders
   async function processMarketOrder(order: any) {
     try {
