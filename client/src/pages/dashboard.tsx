@@ -282,11 +282,12 @@ export default function Dashboard() {
       case "trade":
         return (
           <div className="pb-20">
-            <OrderForm 
-              selectedAsset={selectedAsset}
-              assetData={selectedAssetData}
-              userBalance={(userData as any)?.paperBalance}
-            />
+            <Alert className="mb-4 border-orange-500 bg-orange-500/10">
+              <Zap className="h-4 w-4 text-orange-500" />
+              <AlertDescription className="text-orange-200">
+                Manual trading disabled. VIPER Strike handles all trades autonomously for optimal profit generation.
+              </AlertDescription>
+            </Alert>
           </div>
         );
 
