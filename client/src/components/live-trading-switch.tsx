@@ -117,8 +117,9 @@ export function LiveTradingSwitch({ userId }: LiveTradingSwitchProps) {
     toggleLiveMode.mutate(checked);
   };
 
-  const handleCredentialsSubmit = (e: React.FormEvent) => {
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!credentials.apiKey || !credentials.apiSecret || !credentials.exchangeName) {
       toast({
         title: "Missing Information",
@@ -127,7 +128,13 @@ export function LiveTradingSwitch({ userId }: LiveTradingSwitchProps) {
       });
       return;
     }
-    updateCredentials.mutate();
+
+    try {
+      await updateCredentials.mutateAsync();
+    } catch (error) {
+      // Error is already handled in the mutation's onError callback
+      console.error("Handled form submission error:", error);
+    }
   };
 
   if (!user) return null;
