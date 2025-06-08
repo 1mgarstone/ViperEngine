@@ -224,6 +224,12 @@ export class MemStorage implements IStorage {
       username: insertUser.username,
       email: insertUser.email,
       paperBalance: insertUser.paperBalance || "100000.00000000",
+      liveBalance: "0.00000000",
+      isLiveMode: false,
+      apiKey: null,
+      apiSecret: null,
+      apiPassphrase: null,
+      exchangeName: null,
       createdAt: new Date(),
     };
     this.users.set(id, user);
@@ -600,6 +606,55 @@ export class MemStorage implements IStorage {
       }
     }
   }
+
+  // Live trading operations
+  async toggleLiveMode(userId: number, isLive: boolean): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser: User = { ...user, isLiveMode: isLive };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async updateExchangeCredentials(userId: number, credentials: {
+    apiKey: string;
+    apiSecret: string;
+    apiPassphrase?: string;
+    exchangeName: string;
+  }): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser: User = {
+      ...user,
+      apiKey: credentials.apiKey,
+      apiSecret: credentials.apiSecret,
+      apiPassphrase: credentials.apiPassphrase || null,
+      exchangeName: credentials.exchangeName,
+    };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async getCurrentBalance(userId: number): Promise<string> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    
+    return user.isLiveMode ? user.liveBalance : user.paperBalance;
+  }
+
+  async updateCurrentBalance(userId: number, balance: string): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser: User = {
+      ...user,
+      ...(user.isLiveMode ? { liveBalance: balance } : { paperBalance: balance }),
+    };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
 }
 
 export class DatabaseStorage implements IStorage {
@@ -834,6 +889,100 @@ export class DatabaseStorage implements IStorage {
       .where(eq(viperTrades.id, id))
       .returning();
     return trade;
+  }
+
+  // Dashboard widget operations
+  async getUserWidgets(userId: number): Promise<DashboardWidget[]> {
+    return await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.userId, userId));
+  }
+
+  async createWidget(insertWidget: InsertDashboardWidget): Promise<DashboardWidget> {
+    const [widget] = await db
+      .insert(dashboardWidgets)
+      .values(insertWidget)
+      .returning();
+    return widget;
+  }
+
+  async updateWidget(id: number, updates: Partial<DashboardWidget>): Promise<DashboardWidget> {
+    const [updated] = await db
+      .update(dashboardWidgets)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(dashboardWidgets.id, id))
+      .returning();
+    
+    if (!updated) throw new Error("Widget not found");
+    return updated;
+  }
+
+  async deleteWidget(id: number): Promise<void> {
+    await db.delete(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+  }
+
+  async reorderWidgets(userId: number, widgetOrders: { id: number; position: number }[]): Promise<void> {
+    for (const { id, position } of widgetOrders) {
+      await db
+        .update(dashboardWidgets)
+        .set({ position })
+        .where(eq(dashboardWidgets.id, id));
+    }
+  }
+
+  // Live trading operations
+  async toggleLiveMode(userId: number, isLive: boolean): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ isLiveMode: isLive })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updated) throw new Error("User not found");
+    return updated;
+  }
+
+  async updateExchangeCredentials(userId: number, credentials: {
+    apiKey: string;
+    apiSecret: string;
+    apiPassphrase?: string;
+    exchangeName: string;
+  }): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        apiKey: credentials.apiKey,
+        apiSecret: credentials.apiSecret,
+        apiPassphrase: credentials.apiPassphrase || null,
+        exchangeName: credentials.exchangeName,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updated) throw new Error("User not found");
+    return updated;
+  }
+
+  async getCurrentBalance(userId: number): Promise<string> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) throw new Error("User not found");
+    
+    return user.isLiveMode ? user.liveBalance : user.paperBalance;
+  }
+
+  async updateCurrentBalance(userId: number, balance: string): Promise<User> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) throw new Error("User not found");
+    
+    const [updated] = await db
+      .update(users)
+      .set(user.isLiveMode ? { liveBalance: balance } : { paperBalance: balance })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updated) throw new Error("User not found");
+    return updated;
   }
 }
 
