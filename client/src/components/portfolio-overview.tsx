@@ -5,14 +5,16 @@ import { Progress } from "@/components/ui/progress";
 interface PortfolioOverviewProps {
   portfolioData?: any;
   tradesData?: any[];
+  currentBalance?: number;
+  isLiveMode?: boolean;
 }
 
-export function PortfolioOverview({ portfolioData, tradesData }: PortfolioOverviewProps) {
+export function PortfolioOverview({ portfolioData, tradesData, currentBalance = 0, isLiveMode = false }: PortfolioOverviewProps) {
   const positions = portfolioData?.positions || [];
-  const totalValue = parseFloat(portfolioData?.totalPortfolioValue || "0");
-  const availableBalance = parseFloat(portfolioData?.availableBalance || "0");
+  const totalValue = currentBalance || parseFloat(portfolioData?.totalPortfolioValue || "0");
+  const availableBalance = currentBalance || parseFloat(portfolioData?.availableBalance || "0");
   const totalInvested = positions.reduce((sum: number, pos: any) => sum + parseFloat(pos.totalInvested), 0);
-  const totalPnL = positions.reduce((sum: number, pos: any) => sum + parseFloat(pos.pnl), 0);
+  const totalPnL = (currentBalance - 200) || positions.reduce((sum: number, pos: any) => sum + parseFloat(pos.pnl), 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -21,8 +23,8 @@ export function PortfolioOverview({ portfolioData, tradesData }: PortfolioOvervi
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-white">Portfolio Performance</CardTitle>
-            <Badge variant="secondary" className="bg-green-500/20 text-green-400">
-              SIMULATION
+            <Badge variant="secondary" className={isLiveMode ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"}>
+              {isLiveMode ? "LIVE TRADING" : "DEMO MODE"}
             </Badge>
           </div>
         </CardHeader>

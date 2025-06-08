@@ -1000,7 +1000,7 @@ export class ViperEngine {
             type: 'balance_update',
             data: {
               userId: this.userId,
-              newBalance: parseFloat(newBalance),
+              newBalance: newBalance,
               profit: guaranteedMicroProfit,
               trade: selectedAsset
             }
@@ -1016,7 +1016,7 @@ export class ViperEngine {
     const user = await storage.getUser(this.userId);
     if (!user) return;
     
-    const currentBalance = parseFloat(await storage.getCurrentBalance(this.userId));
+    const currentBalance = await this.getCurrentBalance();
     
     // Advanced liquidation cluster simulation with dynamic sizing
     const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
@@ -1121,8 +1121,8 @@ export class ViperEngine {
     });
     
     // Update user balance immediately with profit
-    const newBalance = (currentBalance + guaranteedProfit).toFixed(8);
-    await storage.updateCurrentBalance(this.userId, newBalance);
+    const newBalance = currentBalance + guaranteedProfit;
+    await this.updateBalance(newBalance);
     
     console.log(`💰 VIPER Strike: +$${guaranteedProfit.toFixed(2)} profit on ${selectedAsset}`);
     console.log(`💰 Leverage: ${optimalLeverage}x | Cluster: $${clusterValue.toFixed(0)} | Position: $${positionSize.toFixed(2)}`);
@@ -1138,7 +1138,7 @@ export class ViperEngine {
             type: 'balance_update',
             data: {
               userId: this.userId,
-              newBalance: parseFloat(newBalance),
+              newBalance: newBalance,
               profit: guaranteedProfit,
               trade: selectedAsset,
               leverage: optimalLeverage,
