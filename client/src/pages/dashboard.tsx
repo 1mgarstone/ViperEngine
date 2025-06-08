@@ -190,7 +190,22 @@ export default function Dashboard() {
                 </div>
                 
                 <button
-                  onClick={() => setActiveTab("viper")}
+                  onClick={async () => {
+                    // Auto-start VIPER when launching
+                    try {
+                      const response = await fetch('/api/viper-control/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ selectedToken: selectedAsset })
+                      });
+                      if (response.ok) {
+                        setActiveTab("viper");
+                      }
+                    } catch (error) {
+                      console.error('Failed to start VIPER:', error);
+                      setActiveTab("viper");
+                    }
+                  }}
                   className="w-full bg-white text-orange-600 font-bold py-3 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center space-x-2"
                 >
                   <Zap className="h-5 w-5" />
@@ -211,19 +226,23 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs text-gray-400">Total Value</div>
-                    <div className="font-mono text-lg text-white">$100.00</div>
+                    <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">P&L Today</div>
-                    <div className="font-mono text-lg text-green-400">+$0.00</div>
+                    <div className={`font-mono text-lg ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Active Positions</div>
-                    <div className="font-mono text-lg text-white">0</div>
+                    <div className="font-mono text-lg text-white">{activeViperTrades}</div>
                   </div>
                   <div>
                     <div className="text-xs text-gray-400">Success Rate</div>
-                    <div className="font-mono text-lg text-blue-400">0%</div>
+                    <div className="font-mono text-lg text-blue-400">
+                      {((viperStatus?.successRate || 0) * 100).toFixed(1)}%
+                    </div>
                   </div>
                 </div>
               </CardContent>
