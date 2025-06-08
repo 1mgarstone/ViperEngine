@@ -91,9 +91,10 @@ export default function Dashboard() {
   const { marketData, isConnected } = useWebSocket();
   
   // Fetch user data with live balance updates
-  const { data: userData } = useQuery({
+  const { data: userData, refetch: refetchUserData } = useQuery({
     queryKey: ["/api/user/1"],
-    refetchInterval: 1000, // Refresh every second for live balance
+    refetchInterval: 300, // Refresh every 300ms for immediate balance updates
+    staleTime: 0, // Always consider data stale for live updates
   });
 
   // Fetch portfolio data

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MarketData {
   id: number;
@@ -7,6 +8,13 @@ interface MarketData {
   currentPrice: string;
   change24h: string;
   volume24h: string;
+}
+
+interface BalanceUpdate {
+  userId: number;
+  newBalance: number;
+  profit: number;
+  trade: string;
 }
 
 interface UseWebSocketReturn {
@@ -21,6 +29,7 @@ export function useWebSocket(): UseWebSocketReturn {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const queryClient = useQueryClient();
 
   const connect = () => {
     try {
@@ -41,6 +50,14 @@ export function useWebSocket(): UseWebSocketReturn {
           
           if (message.type === 'market_data' || message.type === 'price_update') {
             setMarketData(message.data);
+          } else if (message.type === 'balance_update') {
+            // Immediately refresh user data when balance updates from VIPER trades
+            const balanceUpdate: BalanceUpdate = message.data;
+            console.log(`💰 Live Update: +$${balanceUpdate.profit.toFixed(2)} profit on ${balanceUpdate.trade}`);
+            
+            // Invalidate user data cache to force refresh with new balance
+            queryClient.invalidateQueries({ queryKey: ["/api/user/1"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/viper-trades/1"] });
           }
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
