@@ -628,11 +628,15 @@ export class ViperEngine {
       leverageMultiplier = 1.15;
     }
     
-    // Account balance scaling - use higher leverage as balance grows
-    if (currentBalance > 1000) {
-      leverageMultiplier *= 1.2;
+    // Intelligent balance-aware leverage scaling
+    if (currentBalance > 5000) {
+      leverageMultiplier *= 1.5; // 50% leverage boost for very high balances
+    } else if (currentBalance > 2000) {
+      leverageMultiplier *= 1.4; // 40% boost for high balances
+    } else if (currentBalance > 1000) {
+      leverageMultiplier *= 1.3; // 30% boost for medium-high balances
     } else if (currentBalance > 500) {
-      leverageMultiplier *= 1.1;
+      leverageMultiplier *= 1.2; // 20% boost for medium balances
     }
     
     // Confidence-based adjustment
@@ -650,28 +654,44 @@ export class ViperEngine {
     const clusterValue = parseFloat(cluster.estimatedValue);
     const optimalLeverage = await this.calculateOptimalLeverage(cluster, balance);
     
-    // Calculate position size based on liquidation opportunity value
-    let positionRatio = 0.08; // Base 8% of balance
+    // Get actual balance from database to prevent resets
+    const user = await storage.getUser(this.userId);
+    const actualBalance = user ? parseFloat(user.paperBalance) : balance;
     
-    // Scale position size based on liquidation cluster potential
-    if (clusterValue > 100000) {
-      positionRatio = 0.25; // 25% for massive opportunities
-    } else if (clusterValue > 50000) {
-      positionRatio = 0.20; // 20% for large clusters
-    } else if (clusterValue > 20000) {
-      positionRatio = 0.15; // 15% for medium clusters
-    } else if (clusterValue > 10000) {
-      positionRatio = 0.12; // 12% for small-medium clusters
+    // Intelligent position sizing based on accumulated balance tiers
+    let positionRatio = 0.03; // Conservative base for lower balances
+    
+    // Balance-aware position scaling
+    if (actualBalance > 5000) {
+      positionRatio = 0.12; // 12% for very high balances
+    } else if (actualBalance > 2000) {
+      positionRatio = 0.10; // 10% for high balances  
+    } else if (actualBalance > 1000) {
+      positionRatio = 0.08; // 8% for medium-high balances
+    } else if (actualBalance > 500) {
+      positionRatio = 0.06; // 6% for medium balances
     }
     
-    // Apply leverage to position calculation
-    const basePosition = balance * positionRatio;
-    const leveragedPosition = basePosition * (optimalLeverage / 10); // Normalize leverage impact
+    // Strategic cluster value multipliers
+    if (clusterValue > 200000) {
+      positionRatio *= 4.0; // 4x for exceptional opportunities
+    } else if (clusterValue > 100000) {
+      positionRatio *= 3.0; // 3x for massive opportunities
+    } else if (clusterValue > 50000) {
+      positionRatio *= 2.5; // 2.5x for large clusters
+    } else if (clusterValue > 20000) {
+      positionRatio *= 2.0; // 2x for medium clusters
+    } else if (clusterValue > 10000) {
+      positionRatio *= 1.5; // 1.5x for smaller opportunities
+    }
     
-    // Risk management: maximum 30% of balance for any single trade
-    const maxPosition = balance * 0.30;
+    const basePosition = actualBalance * positionRatio;
     
-    return Math.min(leveragedPosition, maxPosition);
+    // Conservative risk management to preserve accumulated profits
+    const maxPosition = actualBalance * 0.20; // Max 20% per trade to protect balance
+    const minPosition = Math.min(100, actualBalance * 0.01); // Minimum viable position
+    
+    return Math.max(minPosition, Math.min(basePosition, maxPosition));
   }
 
   async executeLiquidationStrike(cluster: LiquidationCluster): Promise<ViperTrade | null> {
