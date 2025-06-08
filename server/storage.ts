@@ -74,6 +74,9 @@ export class MemStorage implements IStorage {
   private liquidationClusters: Map<number, LiquidationCluster> = new Map();
   private viperTrades: Map<number, ViperTrade> = new Map();
   
+  // Persistent storage tracking
+  private static instance: MemStorage | null = null;
+  
   private currentUserId = 1;
   private currentAssetId = 1;
   private currentPositionId = 1;
@@ -85,19 +88,27 @@ export class MemStorage implements IStorage {
   private currentViperTradeId = 1;
 
   constructor() {
+    // Implement singleton pattern to prevent balance resets
+    if (MemStorage.instance) {
+      return MemStorage.instance;
+    }
+    
     this.initializeDefaultData();
+    MemStorage.instance = this;
   }
 
   private initializeDefaultData() {
-    // Create default user
-    const defaultUser: User = {
-      id: 1,
-      username: "demo_trader",
-      email: "demo@tradinglab.com",
-      paperBalance: "100.00000000",
-      createdAt: new Date(),
-    };
-    this.users.set(1, defaultUser);
+    // Only create default user if it doesn't exist (preserve accumulated balance)
+    if (!this.users.has(1)) {
+      const defaultUser: User = {
+        id: 1,
+        username: "demo_trader",
+        email: "demo@tradinglab.com",
+        paperBalance: "200.00000000",
+        createdAt: new Date(),
+      };
+      this.users.set(1, defaultUser);
+    }
     this.currentUserId = 2;
 
     // Create default assets
@@ -515,6 +526,17 @@ export class MemStorage implements IStorage {
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
+    
+    // If user doesn't exist, create with preserved balance or default
+    if (!user && id === 1) {
+      const defaultUser = await this.createUser({
+        username: "demo_trader",
+        email: "demo@tradinglab.com",
+        paperBalance: "200.00000000"
+      });
+      return defaultUser;
+    }
+    
     return user || undefined;
   }
 
@@ -730,4 +752,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// Use DatabaseStorage for permanent persistence across restarts
 export const storage = new DatabaseStorage();
