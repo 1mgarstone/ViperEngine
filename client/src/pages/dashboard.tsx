@@ -33,7 +33,6 @@ import {
 
 export default function Dashboard() {
   const [showEducationalModal, setShowEducationalModal] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState("BTC");
   const [activeTab, setActiveTab] = useState("dashboard");
   
   // Collapsible sections state
@@ -123,7 +122,6 @@ export default function Dashboard() {
     refetchInterval: 2000,
   });
 
-  const selectedAssetData = marketData?.find(asset => asset.symbol === selectedAsset);
   const isViperRunning = viperStatus?.isRunning || false;
   const activeViperTrades = viperTrades?.filter((t: any) => t.status === 'open')?.length || 0;
   const totalPnL = viperStatus?.profitability || 0;
@@ -267,8 +265,6 @@ export default function Dashboard() {
               <CardContent>
                 <MarketData 
                   marketData={marketData || []}
-                  onAssetSelect={setSelectedAsset}
-                  selectedAsset={selectedAsset}
                 />
               </CardContent>
             </Card>
