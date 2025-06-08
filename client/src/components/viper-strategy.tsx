@@ -112,9 +112,17 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/viper-settings/${userId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/viper-status"] });
       toast({
         title: "Settings Updated",
-        description: "VIPER strategy settings have been saved.",
+        description: "VIPER strategy settings have been saved and applied.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save VIPER settings. Please try again.",
+        variant: "destructive",
       });
     },
   });
@@ -137,7 +145,22 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   });
 
   const handleSaveSettings = () => {
-    updateSettingsMutation.mutate({});
+    const settingsData = {
+      userId,
+      maxLeverage: maxLeverage[0],
+      volThreshold: "0.003",
+      strikeWindow: "0.250",
+      profitTarget,
+      stopLoss,
+      clusterThreshold: "0.002",
+      positionScaling: "1.50",
+      maxConcurrentTrades: maxTrades[0],
+      balanceMultiplier,
+      isEnabled,
+    };
+    
+    console.log("Saving VIPER settings:", settingsData);
+    updateSettingsMutation.mutate(settingsData);
   };
 
   const handleStartStop = (action: "start" | "stop") => {

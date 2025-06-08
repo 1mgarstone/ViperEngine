@@ -49,7 +49,7 @@ export class ViperEngine {
   }
 
   async initialize(): Promise<void> {
-    this.settings = await storage.getViperSettings(this.userId);
+    this.settings = await storage.getViperSettings(this.userId) || null;
     if (!this.settings) {
       // Create optimized default settings for maximum profit scanning
       this.settings = await storage.updateViperSettings({

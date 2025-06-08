@@ -325,17 +325,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/viper-settings", async (req, res) => {
     try {
+      console.log("Received VIPER settings update:", req.body);
       const validatedSettings = insertViperSettingsSchema.parse(req.body);
       const settings = await storage.updateViperSettings(validatedSettings);
       
-      // Update engine settings if this is the active user
+      // Force engine reinitialization with new settings
       if (validatedSettings.userId === 1) {
+        console.log("Reinitializing VIPER engine with new settings");
         await viperEngine.initialize();
+        
+        // Broadcast settings update via WebSocket
+        const wss = (global as any).wss;
+        if (wss?.clients) {
+          wss.clients.forEach((client: any) => {
+            if (client.readyState === 1) {
+              client.send(JSON.stringify({
+                type: 'settings_updated',
+                data: { settings, message: 'VIPER configuration updated successfully' }
+              }));
+            }
+          });
+        }
       }
       
+      console.log("VIPER settings saved successfully:", settings);
       res.json(settings);
     } catch (error) {
-      res.status(400).json({ message: "Invalid VIPER settings data" });
+      console.error("VIPER settings save error:", error);
+      res.status(400).json({ message: "Invalid VIPER settings data", error: error.message });
     }
   });
 
