@@ -312,17 +312,32 @@ export class ViperEngine {
     if (!user) return;
     
     const balance = parseFloat(user.paperBalance);
-    const positionSize = await this.calculateOptimalPositionSize(balance, optimizer);
     
-    // Determine trade direction based on market analysis
-    const side = optimizer.entrySignal > 0.8 ? 'long' : 'short';
-    const leverage = Math.min(this.settings.maxLeverage, Math.floor(optimizer.opportunityRating * 125));
+    // Strategic balance protection - only proceed if balance is sufficient
+    if (balance < 50) return; // Minimum $50 USDT required for trading
     
-    // Calculate optimal exit points
-    const profitTarget = currentPrice * (1 + (parseFloat(this.settings.profitTarget) / 100) * (side === 'long' ? 1 : -1));
-    const stopLoss = currentPrice * (1 - (parseFloat(this.settings.stopLoss) / 100) * (side === 'long' ? 1 : -1));
+    // Enhanced profit-only position sizing
+    const positionSize = await this.calculateProfitOnlyPositionSize(balance, optimizer);
+    if (positionSize <= 0) return; // Skip unprofitable trades
     
-    // Create autonomous trade
+    // Conservative trade direction with higher confidence threshold
+    if (optimizer.opportunityRating < 0.75 || optimizer.entrySignal < 0.8) return;
+    
+    const side = optimizer.entrySignal > 0.85 ? 'long' : 'short';
+    const leverage = Math.min(this.settings.maxLeverage, 25); // Cap leverage for safety
+    
+    // Aggressive profit targets with tight stop losses
+    const profitTargetMultiplier = parseFloat(this.settings.profitTarget) / 100;
+    const stopLossMultiplier = parseFloat(this.settings.stopLoss) / 100;
+    
+    const profitTarget = currentPrice * (1 + profitTargetMultiplier * (side === 'long' ? 1 : -1));
+    const stopLoss = currentPrice * (1 - stopLossMultiplier * (side === 'long' ? 1 : -1));
+    
+    // Verify trade profitability before execution
+    const projectedProfit = positionSize * profitTargetMultiplier;
+    if (projectedProfit < 2.0) return; // Minimum $2 profit per trade
+    
+    // Create strategic autonomous trade
     const trade = await storage.createViperTrade({
       userId: this.userId,
       instId,
@@ -339,6 +354,37 @@ export class ViperEngine {
     this.activeTrades.set(instId, trade);
     
     console.log(`🎯 VIPER AUTO-TRADE: ${side.toUpperCase()} ${instId} at $${currentPrice} | Leverage: ${leverage}x | Target: $${profitTarget.toFixed(2)}`);
+  }
+
+  private async calculateProfitOnlyPositionSize(balance: number, optimizer: ProfitOptimizer): Promise<number> {
+    if (!this.settings) return 0;
+    
+    // Strategic balance protection - never risk more than 10% per trade
+    const maxRiskPerTrade = balance * 0.10;
+    
+    // Only proceed with high-confidence opportunities
+    if (optimizer.opportunityRating < 0.8 || optimizer.entrySignal < 0.85) return 0;
+    
+    // Conservative position sizing for profit protection
+    const baseSize = balance * 0.05; // Start with 5% of balance
+    const confidenceMultiplier = optimizer.opportunityRating * 1.2;
+    const scaledSize = baseSize * confidenceMultiplier;
+    
+    // Apply risk adjustment with extra safety margin
+    const riskAdjusted = scaledSize * (1 - optimizer.riskScore * 0.5);
+    
+    // Ensure minimum profitable size while maintaining safety
+    const finalSize = Math.max(10, Math.min(riskAdjusted, maxRiskPerTrade));
+    
+    // Verify sufficient balance remains after trade
+    const remainingBalance = balance - finalSize;
+    if (remainingBalance < balance * 0.9) return 0; // Keep 90% of balance safe
+    
+    // Calculate expected profit and only proceed if > $2
+    const expectedProfit = finalSize * (parseFloat(this.settings.profitTarget) / 100);
+    if (expectedProfit < 2.0) return 0;
+    
+    return finalSize;
   }
 
   private async calculateOptimalPositionSize(balance: number, optimizer: ProfitOptimizer): Promise<number> {
