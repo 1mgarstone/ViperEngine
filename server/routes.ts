@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertOrderSchema, insertRiskSettingsSchema } from "@shared/schema";
+import { insertOrderSchema, insertRiskSettingsSchema, insertViperSettingsSchema } from "@shared/schema";
+import { ViperEngine } from "./viper-engine";
 
 interface WebSocketMessage {
   type: string;
@@ -11,6 +12,10 @@ interface WebSocketMessage {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+  
+  // Initialize VIPER Engine for user 1 (demo user)
+  const viperEngine = new ViperEngine(1);
+  await viperEngine.initialize();
   
   // Initialize WebSocket server for real-time price updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
@@ -60,10 +65,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error updating prices:', error);
       }
     }, 3000);
+
+    // VIPER Strategy processing every 5 seconds
+    const viperUpdateInterval = setInterval(async () => {
+      try {
+        if (viperEngine.isEnabled()) {
+          await viperEngine.processAutomatedTradingCycle();
+        }
+      } catch (error) {
+        console.error('Error in VIPER processing:', error);
+      }
+    }, 5000);
     
     ws.on('close', () => {
       console.log('Client disconnected from WebSocket');
       clearInterval(priceUpdateInterval);
+      clearInterval(viperUpdateInterval);
     });
   });
 
@@ -252,6 +269,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(settings);
     } catch (error) {
       res.status(400).json({ message: "Invalid risk settings data" });
+    }
+  });
+
+  // VIPER Strategy routes
+  app.get("/api/viper-settings/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const settings = await storage.getViperSettings(userId);
+      
+      if (!settings) {
+        // Return default settings if none exist
+        return res.json({
+          maxLeverage: 125,
+          volThreshold: "0.008",
+          strikeWindow: "0.170",
+          profitTarget: "2.00",
+          stopLoss: "0.100",
+          clusterThreshold: "0.005",
+          positionScaling: "1.00",
+          maxConcurrentTrades: 2,
+          balanceMultiplier: "2.00",
+          isEnabled: false
+        });
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/viper-settings", async (req, res) => {
+    try {
+      const validatedSettings = insertViperSettingsSchema.parse(req.body);
+      const settings = await storage.updateViperSettings(validatedSettings);
+      
+      // Update engine settings if this is the active user
+      if (validatedSettings.userId === 1) {
+        await viperEngine.initialize();
+      }
+      
+      res.json(settings);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid VIPER settings data" });
+    }
+  });
+
+  app.get("/api/viper-performance/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const performance = await viperEngine.getPerformanceMetrics();
+      res.json(performance);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/viper-trades/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const trades = await storage.getUserViperTrades(userId);
+      res.json(trades);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/viper-clusters", async (req, res) => {
+    try {
+      const clusters = await storage.getUnprocessedClusters();
+      res.json(clusters.slice(0, 10)); // Return last 10 clusters
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

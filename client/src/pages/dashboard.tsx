@@ -11,6 +11,7 @@ import { PortfolioOverview } from "@/components/portfolio-overview";
 import { RiskManagement } from "@/components/risk-management";
 import { MarketData } from "@/components/market-data";
 import { EducationalModal } from "@/components/educational-modal";
+import { ViperStrategy } from "@/components/viper-strategy";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { TriangleAlert, ChartBarIcon, ShieldCheckIcon, GraduationCapIcon } from "lucide-react";
 
@@ -174,9 +175,10 @@ export default function Dashboard() {
             {/* Order Form and Risk Management */}
             <div className="space-y-6">
               <Tabs defaultValue="trade" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 bg-gray-800">
+                <TabsList className="grid w-full grid-cols-3 bg-gray-800">
                   <TabsTrigger value="trade" className="text-white">Paper Trading</TabsTrigger>
                   <TabsTrigger value="risk" className="text-white">Risk Control</TabsTrigger>
+                  <TabsTrigger value="viper" className="text-white">VIPER Strike</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="trade">
@@ -189,6 +191,10 @@ export default function Dashboard() {
                 
                 <TabsContent value="risk">
                   <RiskManagement userId={1} />
+                </TabsContent>
+                
+                <TabsContent value="viper">
+                  <ViperStrategy userId={1} />
                 </TabsContent>
               </Tabs>
               
