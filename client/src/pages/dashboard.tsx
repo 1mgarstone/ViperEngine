@@ -111,7 +111,23 @@ export default function Dashboard() {
     queryKey: ["/api/trades/1"],
   });
 
+  // Fetch VIPER status for real-time updates
+  const { data: viperStatus } = useQuery({
+    queryKey: ["/api/viper-status"],
+    refetchInterval: 1000,
+  });
+
+  // Fetch VIPER trades for active monitoring
+  const { data: viperTrades } = useQuery({
+    queryKey: ["/api/viper-trades/1"],
+    refetchInterval: 2000,
+  });
+
   const selectedAssetData = marketData?.find(asset => asset.symbol === selectedAsset);
+  const isViperRunning = viperStatus?.isRunning || false;
+  const activeViperTrades = viperTrades?.filter((t: any) => t.status === 'open')?.length || 0;
+  const totalPnL = viperStatus?.profitability || 0;
+  const currentBalance = parseFloat(userData?.paperBalance || "100") + totalPnL;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -131,14 +147,26 @@ export default function Dashboard() {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <div className="text-xs text-orange-100">Balance</div>
-                    <div className="font-mono text-lg text-white">$100 USDT</div>
+                    <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)} USDT</div>
+                    {totalPnL !== 0 && (
+                      <div className={`text-xs ${totalPnL > 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        {totalPnL > 0 ? '+' : ''}${totalPnL.toFixed(2)} P&L
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <div className="text-xs text-orange-100">Status</div>
+                    <div className="text-xs text-orange-100">VIPER Status</div>
                     <div className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
-                      <span className="text-white font-medium">{isConnected ? 'Ready' : 'Connecting'}</span>
+                      <div className={`w-3 h-3 rounded-full ${isViperRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                      <span className="text-white font-medium">
+                        {isViperRunning ? 'ACTIVE' : 'STANDBY'}
+                      </span>
                     </div>
+                    {isViperRunning && (
+                      <div className="text-xs text-green-300">
+                        {viperStatus?.cycleCount || 0} cycles • {activeViperTrades} trades
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -310,14 +338,17 @@ export default function Dashboard() {
       {/* Main Content with Swipe Gestures */}
       <main 
         ref={containerRef}
-        className="px-4 py-4 mobile-scroll max-h-screen overflow-y-auto touch-pan-x"
+        className="px-4 py-4 mobile-scroll overflow-y-auto touch-pan-y"
+        style={{
+          height: 'calc(100vh - 140px)',
+          transform: isDragging ? `translateX(${Math.max(-50, Math.min(50, dragOffset * 0.3))}px)` : 'translateX(0)',
+          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+          overflowY: 'scroll',
+          WebkitOverflowScrolling: 'touch'
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{
-          transform: isDragging ? `translateX(${Math.max(-50, Math.min(50, dragOffset * 0.3))}px)` : 'translateX(0)',
-          transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-        }}
       >
         {renderTabContent()}
       </main>
