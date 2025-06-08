@@ -50,11 +50,16 @@ export class ViperEngine {
 
   // Environment-aware balance management
   private async getCurrentBalance(): Promise<number> {
-    const balance = await storage.getCurrentBalance(this.userId);
+    const user = await storage.getUser(this.userId);
+    if (!user) return 0;
+    
+    // Use live or demo balance based on current environment
+    const balance = user.isLiveMode ? user.liveBalance : user.paperBalance;
     return parseFloat(balance);
   }
 
   private async updateBalance(newBalance: number): Promise<void> {
+    // Use the storage's environment-aware balance update method
     await storage.updateCurrentBalance(this.userId, newBalance.toFixed(8));
   }
 
