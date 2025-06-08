@@ -13,11 +13,20 @@ import { MarketData } from "@/components/market-data";
 import { EducationalModal } from "@/components/educational-modal";
 import { ViperStrategy } from "@/components/viper-strategy";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { TriangleAlert, ChartBarIcon, ShieldCheckIcon, GraduationCapIcon } from "lucide-react";
+import { 
+  TriangleAlert, 
+  TrendingUp, 
+  Shield, 
+  Zap, 
+  BarChart3,
+  Settings,
+  Home
+} from "lucide-react";
 
 export default function Dashboard() {
   const [showEducationalModal, setShowEducationalModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState("BTC");
+  const [activeTab, setActiveTab] = useState("dashboard");
   
   // WebSocket connection for real-time data
   const { marketData, isConnected } = useWebSocket();
@@ -44,207 +53,226 @@ export default function Dashboard() {
 
   const selectedAssetData = marketData?.find(asset => asset.symbol === selectedAsset);
 
-  return (
-    <div className="min-h-screen trading-bg-dark text-white">
-      {/* Header */}
-      <header className="trading-bg-slate border-b border-gray-700 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-trading-blue rounded-lg flex items-center justify-center">
-                <ChartBarIcon className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">TradingLab</span>
-              <Badge variant="secondary" className="bg-trading-yellow text-black">
-                SIMULATION MODE
-              </Badge>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <div className="text-sm text-gray-400">Portfolio Value</div>
-              <div className="font-mono font-semibold text-trading-green">
-                ${(portfolioData as any)?.totalPortfolioValue || "100,000.00"}
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-trading-green' : 'bg-trading-red'}`} />
-              <span className="text-sm text-gray-400">
-                {isConnected ? 'Live' : 'Disconnected'}
-              </span>
-            </div>
-            
-            <div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
-              <span className="text-sm font-semibold">DT</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Risk Warning Banner */}
-        <Alert className="mt-4 border-trading-yellow bg-trading-yellow/10">
-          <TriangleAlert className="h-4 w-4 text-trading-yellow" />
-          <AlertDescription className="text-trading-yellow">
-            <strong>EDUCATIONAL SIMULATION ONLY:</strong> This platform uses virtual money for learning purposes. 
-            No real cryptocurrency trading occurs here.
-          </AlertDescription>
-        </Alert>
-      </header>
-
-      <div className="flex h-screen pt-4">
-        {/* Sidebar */}
-        <aside className="w-64 trading-bg-slate border-r border-gray-700 p-4">
-          <nav className="space-y-2">
-            <Button variant="secondary" className="w-full justify-start bg-trading-blue text-white">
-              <ChartBarIcon className="w-4 h-4 mr-2" />
-              Dashboard
-            </Button>
-            
-            <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white">
-              <ShieldCheckIcon className="w-4 h-4 mr-2" />
-              Risk Management
-            </Button>
-            
-            <Button variant="ghost" className="w-full justify-start text-gray-400 hover:text-white">
-              <GraduationCapIcon className="w-4 h-4 mr-2" />
-              Learn Trading
-            </Button>
-          </nav>
-          
-          {/* Educational Notice */}
-          <div className="mt-8 p-4 bg-blue-900/30 border border-blue-600 rounded-lg">
-            <div className="flex items-start space-x-2">
-              <GraduationCapIcon className="w-5 h-5 text-blue-400 mt-1" />
-              <div>
-                <h4 className="font-semibold text-blue-400 text-sm">Educational Platform</h4>
-                <p className="text-xs text-blue-200 mt-1">
-                  Practice trading strategies with virtual funds in a risk-free environment.
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {/* Market Overview */}
-          <MarketData 
-            marketData={marketData || []}
-            onAssetSelect={setSelectedAsset}
-            selectedAsset={selectedAsset}
-          />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-            {/* Trading Interface */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="trading-bg-slate border-gray-700">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-white">
-                      {selectedAssetData?.name || selectedAsset} Price Chart
-                    </CardTitle>
-                    <div className="flex space-x-2">
-                      <Button size="sm" variant="outline" className="text-trading-blue border-trading-blue">
-                        1H
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-gray-400">
-                        4H
-                      </Button>
-                      <Button size="sm" variant="ghost" className="text-gray-400">
-                        1D
-                      </Button>
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return (
+          <div className="space-y-4 pb-20">
+            {/* Quick Stats */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-lg flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-blue-400" />
+                  <span>Portfolio</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-400">Balance</div>
+                    <div className="font-mono text-lg text-green-400">$100,000</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">P&L</div>
+                    <div className="font-mono text-lg text-gray-400">$0.00</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Positions</div>
+                    <div className="font-mono text-lg text-white">0</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Status</div>
+                    <div className="flex items-center space-x-1">
+                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+                      <span className="text-sm text-gray-300">{isConnected ? 'Live' : 'Off'}</span>
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <TradingChart 
-                    symbol={selectedAsset}
-                    currentPrice={selectedAssetData?.currentPrice}
-                  />
-                </CardContent>
-              </Card>
-              
-              {/* Portfolio Overview */}
-              <PortfolioOverview 
-                portfolioData={portfolioData}
-                tradesData={tradesData as any[]}
-              />
-            </div>
-            
-            {/* Order Form and Risk Management */}
-            <div className="space-y-6">
-              <Tabs defaultValue="trade" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-gray-800">
-                  <TabsTrigger value="trade" className="text-white">Paper Trading</TabsTrigger>
-                  <TabsTrigger value="risk" className="text-white">Risk Control</TabsTrigger>
-                  <TabsTrigger value="viper" className="text-white">VIPER Strike</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="trade">
-                  <OrderForm 
-                    selectedAsset={selectedAsset}
-                    assetData={selectedAssetData}
-                    userBalance={(userData as any)?.paperBalance}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="risk">
-                  <RiskManagement userId={1} />
-                </TabsContent>
-                
-                <TabsContent value="viper">
-                  <ViperStrategy userId={1} />
-                </TabsContent>
-              </Tabs>
-              
-              {/* Recent Orders */}
-              <Card className="trading-bg-slate border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {(ordersData as any[])?.slice(0, 5).map((order: any) => (
-                      <div key={order.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-2 h-2 rounded-full ${
-                            order.status === 'filled' ? 'bg-trading-green' : 
-                            order.status === 'pending' ? 'bg-trading-yellow' : 'bg-trading-red'
-                          }`} />
-                          <div>
-                            <div className="font-medium">{order.asset?.symbol}/USDT</div>
-                            <div className="text-sm text-gray-400">
-                              {order.side.toUpperCase()} • ${parseFloat(order.price || '0').toFixed(2)}
-                            </div>
-                          </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Market Overview */}
+            <MarketData 
+              marketData={marketData || []}
+              onAssetSelect={setSelectedAsset}
+              selectedAsset={selectedAsset}
+            />
+
+            {/* Trading Chart */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-lg">{selectedAsset}/USDT</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TradingChart 
+                  symbol={selectedAsset}
+                  currentPrice={selectedAssetData?.currentPrice}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Recent Orders */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-lg">Recent Orders</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(ordersData as any[])?.length > 0 ? (
+                  <div className="space-y-2">
+                    {(ordersData as any[]).slice(0, 3).map((order: any) => (
+                      <div key={order.id} className="flex items-center justify-between p-3 bg-gray-700 rounded">
+                        <div>
+                          <div className="font-medium text-sm text-white">{order.symbol}</div>
+                          <div className="text-xs text-gray-400">{order.side} • ${order.price}</div>
                         </div>
-                        <div className="text-right">
-                          <Badge variant="secondary" className={
-                            order.status === 'filled' ? 'bg-trading-green text-white' :
-                            order.status === 'pending' ? 'bg-trading-yellow text-black' :
-                            'bg-trading-red text-white'
-                          }>
-                            {order.status}
-                          </Badge>
-                        </div>
+                        <Badge className="text-xs" variant={order.status === 'filled' ? 'default' : 'secondary'}>
+                          {order.status}
+                        </Badge>
                       </div>
                     ))}
-                    
-                    {(!(ordersData as any[]) || (ordersData as any[]).length === 0) && (
-                      <div className="text-center text-gray-400 py-8">
-                        <p>No orders placed yet</p>
-                        <p className="text-sm mt-1">Start paper trading to see your orders here</p>
-                      </div>
-                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-gray-400 text-sm">No orders yet</p>
+                    <p className="text-gray-500 text-xs">Start trading to see orders</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Educational Alert */}
+            <Alert className="border-orange-500 bg-orange-500/10 mb-20">
+              <TriangleAlert className="h-4 w-4 text-orange-400" />
+              <AlertDescription className="text-gray-300 text-sm">
+                <strong>Demo Mode:</strong> Virtual funds only - no real money at risk.
+              </AlertDescription>
+            </Alert>
           </div>
-        </main>
-      </div>
-      
+        );
+
+      case "trade":
+        return (
+          <div className="pb-20">
+            <OrderForm 
+              selectedAsset={selectedAsset}
+              assetData={selectedAssetData}
+              userBalance={(userData as any)?.paperBalance}
+            />
+          </div>
+        );
+
+      case "risk":
+        return (
+          <div className="pb-20">
+            <RiskManagement userId={1} />
+          </div>
+        );
+
+      case "viper":
+        return (
+          <div className="pb-20">
+            <ViperStrategy userId={1} />
+          </div>
+        );
+
+      case "portfolio":
+        return (
+          <div className="pb-20">
+            <PortfolioOverview 
+              portfolioData={portfolioData}
+              tradesData={tradesData as any[]}
+            />
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Mobile Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 sticky top-0 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 bg-gradient-to-r from-orange-500 to-blue-500 rounded flex items-center justify-center">
+              <span className="text-xs font-bold text-white">TL</span>
+            </div>
+            <h1 className="text-lg font-bold">TradingLab</h1>
+            <Badge className="px-2 py-1 text-xs bg-green-600 text-white">SIM</Badge>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="text-right">
+              <div className="text-xs text-gray-400">Portfolio</div>
+              <div className="font-mono text-sm text-green-400">$100K</div>
+            </div>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="px-4 py-4 mobile-scroll max-h-screen overflow-y-auto">
+        {renderTabContent()}
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 px-4 py-2 z-50">
+        <div className="flex items-center justify-around">
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === "dashboard" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <Home className="h-5 w-5" />
+            <span className="text-xs">Home</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("trade")}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === "trade" ? "bg-green-600 text-white" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <TrendingUp className="h-5 w-5" />
+            <span className="text-xs">Trade</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("portfolio")}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === "portfolio" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <BarChart3 className="h-5 w-5" />
+            <span className="text-xs">Portfolio</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("risk")}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === "risk" ? "bg-yellow-600 text-white" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <Shield className="h-5 w-5" />
+            <span className="text-xs">Risk</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("viper")}
+            className={`flex flex-col items-center space-y-1 p-2 rounded-lg transition-colors ${
+              activeTab === "viper" ? "bg-orange-600 text-white" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <Zap className="h-5 w-5" />
+            <span className="text-xs">VIPER</span>
+          </button>
+        </div>
+      </nav>
+
       {/* Educational Modal */}
       <EducationalModal 
         isOpen={showEducationalModal}
