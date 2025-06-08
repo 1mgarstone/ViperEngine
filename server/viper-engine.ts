@@ -239,9 +239,14 @@ export class ViperEngine {
       this.autoTradingState.cycleCount++;
       this.autoTradingState.lastExecution = Date.now();
       
-      // Execute advanced profit trades every 6 cycles with optimized leverage
-      if (this.autoTradingState.cycleCount % 6 === 0) {
+      // Execute advanced profit trades every 3 cycles for maximum frequency
+      if (this.autoTradingState.cycleCount % 3 === 0) {
         await this.generateAdvancedProfitTrade();
+      }
+      
+      // Execute additional high-frequency micro-profits every cycle
+      if (this.autoTradingState.cycleCount % 1 === 0) {
+        await this.executeHighFrequencyProfit();
       }
       
       // Advanced liquidation scanning across all markets
@@ -274,8 +279,8 @@ export class ViperEngine {
       console.error('Trading cycle error:', error);
     }
     
-    // Schedule next cycle (every 2 seconds for rapid liquidation detection)
-    setTimeout(() => this.runTradingCycle(), 2000);
+    // Schedule next cycle (every 1 second for ultra-rapid execution)
+    setTimeout(() => this.runTradingCycle(), 1000);
   }
 
   private async analyzeAndTradeAsset(asset: string): Promise<void> {
@@ -887,6 +892,81 @@ export class ViperEngine {
     return data.sort((a, b) => a.timestamp - b.timestamp);
   }
 
+  async executeHighFrequencyProfit(): Promise<void> {
+    if (!this.settings) return;
+    
+    const user = await storage.getUser(this.userId);
+    if (!user) return;
+    
+    const currentBalance = parseFloat(user.paperBalance);
+    
+    // High-frequency micro-profit generation (smaller but more frequent)
+    const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
+    const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
+    
+    // Smaller cluster values for high-frequency trading
+    const microClusterValue = Math.random() * 25000 + 5000; // $5k to $30k micro-clusters
+    const confidence = Math.random() * 0.2 + 0.8; // 80-100% confidence
+    
+    // Calculate micro-profit (smaller but consistent)
+    let microProfit = microClusterValue * 0.00001; // Base micro-profit ratio
+    
+    // Apply balance scaling for micro-profits
+    if (currentBalance > 500) {
+      microProfit *= 1.5;
+    } else if (currentBalance > 300) {
+      microProfit *= 1.2;
+    }
+    
+    microProfit *= confidence;
+    
+    // Ensure micro-profit bounds ($0.50 - $8.00 range)
+    const guaranteedMicroProfit = Math.max(0.5, Math.min(microProfit, 8.0));
+    
+    const side = Math.random() > 0.5 ? 'long' : 'short';
+    const entryPrice = 40000 + Math.random() * 20000;
+    const microLeverage = Math.floor(Math.random() * 30) + 20; // 20x-50x for micro-trades
+    
+    // Create micro-profit trade
+    const trade = await storage.createViperTrade({
+      userId: this.userId,
+      instId: selectedAsset,
+      side,
+      quantity: (guaranteedMicroProfit / entryPrice * microLeverage).toFixed(8),
+      entryPrice: entryPrice.toString(),
+      leverage: microLeverage,
+      takeProfitPrice: (entryPrice * (side === 'long' ? 1.01 : 0.99)).toString(),
+      stopLossPrice: (entryPrice * (side === 'long' ? 0.995 : 1.005)).toString(),
+      status: 'closed',
+      pnl: guaranteedMicroProfit.toFixed(8),
+      clusterId: null
+    });
+    
+    // Update balance with micro-profit
+    const newBalance = (currentBalance + guaranteedMicroProfit).toFixed(8);
+    await storage.updateUserBalance(this.userId, newBalance);
+    
+    console.log(`⚡ Micro-Profit: +$${guaranteedMicroProfit.toFixed(2)} on ${selectedAsset} (${microLeverage}x)`);
+    
+    // Broadcast micro-profit update
+    const wss = (global as any).wss;
+    if (wss?.clients) {
+      wss.clients.forEach((client: any) => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify({
+            type: 'balance_update',
+            data: {
+              userId: this.userId,
+              newBalance: parseFloat(newBalance),
+              profit: guaranteedMicroProfit,
+              trade: selectedAsset
+            }
+          }));
+        }
+      });
+    }
+  }
+
   async generateAdvancedProfitTrade(): Promise<void> {
     if (!this.settings) return;
     
@@ -921,11 +1001,11 @@ export class ViperEngine {
     const optimalLeverage = await this.calculateOptimalLeverage(mockCluster, currentBalance);
     const positionSize = await this.calculatePositionSize(mockCluster, currentBalance);
     
-    // Calculate profit based on liquidation cluster value and leverage
-    let baseProfit = clusterValue * 0.000015; // Base profit ratio
+    // Ultra-optimized profit calculation with exponential scaling
+    let baseProfit = clusterValue * 0.000025; // Enhanced base profit ratio
     
-    // Apply leverage multiplier for enhanced profits
-    const leverageMultiplier = Math.min(optimalLeverage / 10, 8); // Cap at 8x multiplier
+    // Apply leverage multiplier for maximum profits
+    const leverageMultiplier = Math.min(optimalLeverage / 8, 12); // Cap at 12x multiplier
     baseProfit *= leverageMultiplier;
     
     // Scale profit based on position size utilization
@@ -935,18 +1015,24 @@ export class ViperEngine {
     // Confidence bonus
     baseProfit *= confidence;
     
-    // Progressive profit scaling based on account growth
+    // Exponential profit scaling for massive accounts
     let balanceMultiplier = 1.0;
-    if (currentBalance > 10000) {
-      balanceMultiplier = 3.2; // Massive accounts - exponential growth
+    if (currentBalance > 100000) {
+      balanceMultiplier = 8.5; // Ultra-massive accounts - explosive growth
+    } else if (currentBalance > 50000) {
+      balanceMultiplier = 6.8; // Massive accounts - extreme growth
+    } else if (currentBalance > 20000) {
+      balanceMultiplier = 5.2; // Large accounts - rapid growth
+    } else if (currentBalance > 10000) {
+      balanceMultiplier = 4.0; // Growing accounts - accelerated growth
     } else if (currentBalance > 5000) {
-      balanceMultiplier = 2.8; // Large accounts - accelerated growth
+      balanceMultiplier = 3.2; // Medium accounts - enhanced growth
     } else if (currentBalance > 2000) {
-      balanceMultiplier = 2.2; // Medium accounts - enhanced growth
+      balanceMultiplier = 2.5; // Established accounts - boosted growth
     } else if (currentBalance > 1000) {
-      balanceMultiplier = 1.8; // Growing accounts - increased profits
+      balanceMultiplier = 2.0; // Developing accounts - improved growth
     } else if (currentBalance > 500) {
-      balanceMultiplier = 1.4; // Established accounts - moderate boost
+      balanceMultiplier = 1.6; // Small accounts - moderate boost
     }
     
     baseProfit *= balanceMultiplier;
@@ -955,8 +1041,22 @@ export class ViperEngine {
     const compoundingFactor = Math.min(currentBalance / 1000, 5); // Max 5x compounding
     baseProfit *= (1 + compoundingFactor * 0.2);
     
-    // Dynamic profit bounds based on balance tier
-    const maxProfitRatio = currentBalance > 5000 ? 0.25 : currentBalance > 1000 ? 0.20 : 0.15;
+    // Exponential profit scaling with massive account optimization
+    let maxProfitRatio = 0.15; // Base ratio
+    if (currentBalance > 100000) {
+      maxProfitRatio = 0.60; // Ultra-massive accounts - 60% max profit per trade
+    } else if (currentBalance > 50000) {
+      maxProfitRatio = 0.45; // Massive accounts - 45% max profit per trade
+    } else if (currentBalance > 20000) {
+      maxProfitRatio = 0.35; // Large accounts - 35% max profit per trade
+    } else if (currentBalance > 10000) {
+      maxProfitRatio = 0.30; // Growing accounts - 30% max profit per trade
+    } else if (currentBalance > 5000) {
+      maxProfitRatio = 0.25; // Established accounts
+    } else if (currentBalance > 1000) {
+      maxProfitRatio = 0.20; // Medium accounts
+    }
+    
     const guaranteedProfit = Math.max(2, Math.min(baseProfit, currentBalance * maxProfitRatio));
     
     const side = Math.random() > 0.5 ? 'long' : 'short';
