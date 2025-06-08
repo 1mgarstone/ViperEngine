@@ -90,10 +90,14 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   // Update VIPER settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (settingsData: any) => {
-      return apiRequest(`/api/viper-settings`, {
+      const response = await fetch(`/api/viper-settings`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(settingsData),
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/viper-settings/${userId}`] });

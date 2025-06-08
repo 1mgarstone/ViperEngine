@@ -65,7 +65,7 @@ export default function Dashboard() {
             <div className="text-right">
               <div className="text-sm text-gray-400">Portfolio Value</div>
               <div className="font-mono font-semibold text-trading-green">
-                ${portfolioData?.totalPortfolioValue || "100,000.00"}
+                ${(portfolioData as any)?.totalPortfolioValue || "100,000.00"}
               </div>
             </div>
             
@@ -168,7 +168,7 @@ export default function Dashboard() {
               {/* Portfolio Overview */}
               <PortfolioOverview 
                 portfolioData={portfolioData}
-                tradesData={tradesData}
+                tradesData={tradesData as any[]}
               />
             </div>
             
@@ -185,7 +185,7 @@ export default function Dashboard() {
                   <OrderForm 
                     selectedAsset={selectedAsset}
                     assetData={selectedAssetData}
-                    userBalance={userData?.paperBalance}
+                    userBalance={(userData as any)?.paperBalance}
                   />
                 </TabsContent>
                 
@@ -205,7 +205,7 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {ordersData?.slice(0, 5).map((order: any) => (
+                    {(ordersData as any[])?.slice(0, 5).map((order: any) => (
                       <div key={order.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
                         <div className="flex items-center space-x-3">
                           <div className={`w-2 h-2 rounded-full ${
@@ -231,7 +231,7 @@ export default function Dashboard() {
                       </div>
                     ))}
                     
-                    {(!ordersData || ordersData.length === 0) && (
+                    {(!(ordersData as any[]) || (ordersData as any[]).length === 0) && (
                       <div className="text-center text-gray-400 py-8">
                         <p>No orders placed yet</p>
                         <p className="text-sm mt-1">Start paper trading to see your orders here</p>
