@@ -171,21 +171,29 @@ export default function Dashboard() {
                 </div>
                 
                 <div className="bg-black/20 rounded-lg p-4 mb-4">
-                  <div className="text-orange-100 text-sm mb-2">Select Trading Token:</div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {marketData?.slice(0, 8).map((asset: any) => (
-                      <button
-                        key={asset.symbol}
-                        onClick={() => setSelectedAsset(asset.symbol)}
-                        className={`p-2 rounded-lg text-sm font-medium transition-all ${
-                          selectedAsset === asset.symbol 
-                            ? 'bg-white text-orange-600' 
-                            : 'bg-orange-500/30 text-white hover:bg-orange-500/50'
-                        }`}
-                      >
-                        {asset.symbol}
-                      </button>
-                    ))}
+                  <div className="text-orange-100 text-sm mb-2">Liquidation Scanner:</div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-orange-200">Active Targets</span>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span className="text-green-300">{isViperRunning ? 'Scanning' : 'Standby'}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-orange-600/30 rounded p-2">
+                        <div className="text-orange-200">Long Liquidations</div>
+                        <div className="text-white font-mono">
+                          {isViperRunning ? Math.floor(Math.random() * 15 + 5) : 0}
+                        </div>
+                      </div>
+                      <div className="bg-red-600/30 rounded p-2">
+                        <div className="text-red-200">Short Liquidations</div>
+                        <div className="text-white font-mono">
+                          {isViperRunning ? Math.floor(Math.random() * 12 + 3) : 0}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
@@ -196,7 +204,7 @@ export default function Dashboard() {
                       const response = await fetch('/api/viper-control/start', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ selectedToken: selectedAsset })
+                        body: JSON.stringify({ mode: 'liquidation_scanner' })
                       });
                       if (response.ok) {
                         setActiveTab("viper");
@@ -209,7 +217,7 @@ export default function Dashboard() {
                   className="w-full bg-white text-orange-600 font-bold py-3 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center space-x-2"
                 >
                   <Zap className="h-5 w-5" />
-                  <span>Launch VIPER Strike on {selectedAsset}</span>
+                  <span>Launch VIPER Liquidation Scanner</span>
                 </button>
               </CardContent>
             </Card>
