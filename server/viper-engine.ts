@@ -14,11 +14,35 @@ interface VolatilityMetrics {
   strength: number;
 }
 
+interface ProfitOptimizer {
+  entrySignal: number;
+  exitSignal: number;
+  riskScore: number;
+  opportunityRating: number;
+}
+
+interface AutoTradingState {
+  isRunning: boolean;
+  cycleCount: number;
+  lastExecution: number;
+  profitability: number;
+  successRate: number;
+}
+
 export class ViperEngine {
   private userId: number;
   private settings: ViperSettings | null = null;
   private activeTrades: Map<string, ViperTrade> = new Map();
   private priceHistory: Map<string, number[]> = new Map();
+  private autoTradingState: AutoTradingState = {
+    isRunning: false,
+    cycleCount: 0,
+    lastExecution: 0,
+    profitability: 0,
+    successRate: 0
+  };
+  private profitOptimizer: Map<string, ProfitOptimizer> = new Map();
+  private marketAnalysis: Map<string, any> = new Map();
   
   constructor(userId: number) {
     this.userId = userId;
@@ -27,27 +51,296 @@ export class ViperEngine {
   async initialize(): Promise<void> {
     this.settings = await storage.getViperSettings(this.userId);
     if (!this.settings) {
-      // Create default settings if none exist
+      // Create optimized default settings for maximum profitability
       this.settings = await storage.updateViperSettings({
         userId: this.userId,
         maxLeverage: 125,
-        volThreshold: "0.008",
-        strikeWindow: "0.170",
-        profitTarget: "2.00",
-        stopLoss: "0.100",
-        clusterThreshold: "0.005",
-        positionScaling: "1.00",
-        maxConcurrentTrades: 2,
-        balanceMultiplier: "2.00",
-        isEnabled: false,
+        volThreshold: "0.003",      // Lower threshold for more opportunities
+        strikeWindow: "0.250",      // Wider window for better capture
+        profitTarget: "3.50",       // Higher profit targets
+        stopLoss: "0.080",          // Tighter stops to preserve capital
+        clusterThreshold: "0.002",  // More sensitive cluster detection
+        positionScaling: "1.50",    // Aggressive position scaling
+        maxConcurrentTrades: 5,     // More simultaneous trades
+        balanceMultiplier: "3.00",  // Higher capital utilization
+        isEnabled: true,            // Auto-enable for autonomous trading
       });
     }
     
-    // Load active trades
+    // Load active trades and initialize profit optimizer
     const trades = await storage.getActiveViperTrades(this.userId);
     trades.forEach(trade => {
       this.activeTrades.set(trade.instId, trade);
     });
+    
+    // Start autonomous trading cycle
+    this.startAutonomousTrading();
+  }
+
+  // Advanced profit optimization algorithms
+  private async optimizeProfitStrategy(instId: string, currentPrice: number): Promise<ProfitOptimizer> {
+    const volatility = this.calculateVolatilityIndex(instId, currentPrice);
+    const priceHistory = this.priceHistory.get(instId) || [];
+    
+    // Calculate momentum and trend strength
+    const momentum = this.calculateMomentum(priceHistory);
+    const support = this.findSupportLevels(priceHistory, currentPrice);
+    const resistance = this.findResistanceLevels(priceHistory, currentPrice);
+    
+    // Advanced entry signal calculation
+    const entrySignal = this.calculateEntrySignal(volatility, momentum, support, resistance);
+    const exitSignal = this.calculateExitSignal(currentPrice, support, resistance);
+    const riskScore = this.assessRiskLevel(volatility, momentum);
+    const opportunityRating = this.rateOpportunity(entrySignal, volatility.strength);
+    
+    return {
+      entrySignal,
+      exitSignal,
+      riskScore,
+      opportunityRating
+    };
+  }
+
+  private calculateMomentum(priceHistory: number[]): number {
+    if (priceHistory.length < 10) return 0;
+    
+    const recent = priceHistory.slice(-10);
+    const older = priceHistory.slice(-20, -10);
+    
+    const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    const olderAvg = older.reduce((a, b) => a + b, 0) / older.length;
+    
+    return (recentAvg - olderAvg) / olderAvg;
+  }
+
+  private findSupportLevels(priceHistory: number[], currentPrice: number): number[] {
+    const supports = [];
+    const lookback = Math.min(50, priceHistory.length);
+    
+    for (let i = 2; i < lookback - 2; i++) {
+      const price = priceHistory[priceHistory.length - 1 - i];
+      const prev = priceHistory[priceHistory.length - 1 - i - 1];
+      const next = priceHistory[priceHistory.length - 1 - i + 1];
+      
+      if (price < prev && price < next && price < currentPrice * 0.998) {
+        supports.push(price);
+      }
+    }
+    
+    return supports.sort((a, b) => b - a).slice(0, 3);
+  }
+
+  private findResistanceLevels(priceHistory: number[], currentPrice: number): number[] {
+    const resistances = [];
+    const lookback = Math.min(50, priceHistory.length);
+    
+    for (let i = 2; i < lookback - 2; i++) {
+      const price = priceHistory[priceHistory.length - 1 - i];
+      const prev = priceHistory[priceHistory.length - 1 - i - 1];
+      const next = priceHistory[priceHistory.length - 1 - i + 1];
+      
+      if (price > prev && price > next && price > currentPrice * 1.002) {
+        resistances.push(price);
+      }
+    }
+    
+    return resistances.sort((a, b) => a - b).slice(0, 3);
+  }
+
+  private calculateEntrySignal(volatility: VolatilityMetrics, momentum: number, supports: number[], resistances: number[]): number {
+    let signal = 0;
+    
+    // Volatility boost
+    signal += volatility.strength * 0.3;
+    
+    // Momentum factor
+    signal += Math.abs(momentum) * 0.4;
+    
+    // Support/resistance proximity
+    if (supports.length > 0) signal += 0.2;
+    if (resistances.length > 0) signal += 0.1;
+    
+    // Trend alignment bonus
+    if (volatility.trend === 'bullish' && momentum > 0) signal += 0.3;
+    if (volatility.trend === 'bearish' && momentum < 0) signal += 0.3;
+    
+    return Math.min(1.0, signal);
+  }
+
+  private calculateExitSignal(currentPrice: number, supports: number[], resistances: number[]): number {
+    let signal = 0;
+    
+    // Near resistance levels
+    resistances.forEach(resistance => {
+      const distance = Math.abs(currentPrice - resistance) / currentPrice;
+      if (distance < 0.005) signal += 0.4;
+    });
+    
+    // Near support levels (for short positions)
+    supports.forEach(support => {
+      const distance = Math.abs(currentPrice - support) / currentPrice;
+      if (distance < 0.005) signal += 0.3;
+    });
+    
+    return Math.min(1.0, signal);
+  }
+
+  private assessRiskLevel(volatility: VolatilityMetrics, momentum: number): number {
+    let risk = 0;
+    
+    // High volatility increases risk
+    risk += volatility.index * 0.4;
+    
+    // High momentum can be risky
+    risk += Math.abs(momentum) * 0.3;
+    
+    // Neutral trend is riskier
+    if (volatility.trend === 'neutral') risk += 0.3;
+    
+    return Math.min(1.0, risk);
+  }
+
+  private rateOpportunity(entrySignal: number, strength: number): number {
+    return (entrySignal * 0.7) + (strength * 0.3);
+  }
+
+  // Autonomous trading system controls
+  startAutonomousTrading(): void {
+    if (this.autoTradingState.isRunning) return;
+    
+    this.autoTradingState.isRunning = true;
+    console.log('🚀 VIPER Autonomous Trading: STARTED');
+    this.runTradingCycle();
+  }
+
+  stopAutonomousTrading(): void {
+    this.autoTradingState.isRunning = false;
+    console.log('⏹️ VIPER Autonomous Trading: STOPPED');
+  }
+
+  getAutonomousState(): AutoTradingState {
+    return { ...this.autoTradingState };
+  }
+
+  private async runTradingCycle(): Promise<void> {
+    if (!this.settings?.isEnabled || !this.autoTradingState.isRunning) return;
+    
+    try {
+      this.autoTradingState.cycleCount++;
+      this.autoTradingState.lastExecution = Date.now();
+      
+      // Multi-asset analysis
+      const assets = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'MATIC', 'AVAX'];
+      
+      for (const asset of assets) {
+        await this.analyzeAndTradeAsset(asset);
+      }
+      
+      // Monitor existing trades
+      await this.monitorActiveTrades();
+      
+      // Update performance metrics
+      await this.updatePerformanceMetrics();
+      
+    } catch (error) {
+      console.error('Trading cycle error:', error);
+    }
+    
+    // Schedule next cycle (every 5 seconds for high-frequency trading)
+    setTimeout(() => this.runTradingCycle(), 5000);
+  }
+
+  private async analyzeAndTradeAsset(asset: string): Promise<void> {
+    if (!this.settings || this.activeTrades.size >= this.settings.maxConcurrentTrades) return;
+    
+    // Generate market data and analyze
+    const marketData = await this.generateMarketData(asset);
+    const currentPrice = parseFloat(marketData[marketData.length - 1].price);
+    
+    // Update price history
+    let history = this.priceHistory.get(asset) || [];
+    history.push(currentPrice);
+    if (history.length > 200) history = history.slice(-200);
+    this.priceHistory.set(asset, history);
+    
+    // Profit optimization analysis
+    const optimizer = await this.optimizeProfitStrategy(asset, currentPrice);
+    this.profitOptimizer.set(asset, optimizer);
+    
+    // Check for trading opportunities
+    if (optimizer.opportunityRating > 0.7 && optimizer.riskScore < 0.5) {
+      await this.executeAutonomousTrade(asset, optimizer, currentPrice);
+    }
+    
+    // Detect liquidation clusters for enhanced opportunities
+    const clusters = await this.detectLiquidationClusters(asset, marketData);
+    for (const cluster of clusters) {
+      if (this.activeTrades.size < this.settings.maxConcurrentTrades) {
+        await this.executeLiquidationStrike(cluster);
+      }
+    }
+  }
+
+  private async executeAutonomousTrade(instId: string, optimizer: ProfitOptimizer, currentPrice: number): Promise<void> {
+    if (!this.settings) return;
+    
+    const user = await storage.getUser(this.userId);
+    if (!user) return;
+    
+    const balance = parseFloat(user.paperBalance);
+    const positionSize = await this.calculateOptimalPositionSize(balance, optimizer);
+    
+    // Determine trade direction based on market analysis
+    const side = optimizer.entrySignal > 0.8 ? 'long' : 'short';
+    const leverage = Math.min(this.settings.maxLeverage, Math.floor(optimizer.opportunityRating * 125));
+    
+    // Calculate optimal exit points
+    const profitTarget = currentPrice * (1 + (parseFloat(this.settings.profitTarget) / 100) * (side === 'long' ? 1 : -1));
+    const stopLoss = currentPrice * (1 - (parseFloat(this.settings.stopLoss) / 100) * (side === 'long' ? 1 : -1));
+    
+    // Create autonomous trade
+    const trade = await storage.createViperTrade({
+      userId: this.userId,
+      instId,
+      side,
+      quantity: positionSize.toString(),
+      entryPrice: currentPrice.toString(),
+      leverage,
+      takeProfitPrice: profitTarget.toString(),
+      stopLossPrice: stopLoss.toString(),
+      status: 'open',
+      clusterId: null
+    });
+    
+    this.activeTrades.set(instId, trade);
+    
+    console.log(`🎯 VIPER AUTO-TRADE: ${side.toUpperCase()} ${instId} at $${currentPrice} | Leverage: ${leverage}x | Target: $${profitTarget.toFixed(2)}`);
+  }
+
+  private async calculateOptimalPositionSize(balance: number, optimizer: ProfitOptimizer): Promise<number> {
+    if (!this.settings) return 0;
+    
+    const baseSize = balance * parseFloat(this.settings.balanceMultiplier) / 100;
+    const riskAdjustment = 1 - optimizer.riskScore;
+    const opportunityBonus = optimizer.opportunityRating;
+    
+    return baseSize * riskAdjustment * opportunityBonus * parseFloat(this.settings.positionScaling);
+  }
+
+  private async updatePerformanceMetrics(): Promise<void> {
+    const trades = await storage.getUserViperTrades(this.userId);
+    const completedTrades = trades.filter(t => t.status === 'closed');
+    
+    if (completedTrades.length > 0) {
+      const totalPnL = completedTrades.reduce((sum, trade) => {
+        return sum + parseFloat(trade.pnl || '0');
+      }, 0);
+      
+      const winningTrades = completedTrades.filter(t => parseFloat(t.pnl || '0') > 0).length;
+      
+      this.autoTradingState.profitability = totalPnL;
+      this.autoTradingState.successRate = winningTrades / completedTrades.length;
+    }
   }
 
   async detectLiquidationClusters(instId: string, marketData: MarketDataPoint[]): Promise<LiquidationCluster[]> {

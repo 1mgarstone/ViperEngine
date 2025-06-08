@@ -94,7 +94,7 @@ export class MemStorage implements IStorage {
       id: 1,
       username: "demo_trader",
       email: "demo@tradinglab.com",
-      paperBalance: "100000.00000000",
+      paperBalance: "100.00000000",
       createdAt: new Date(),
     };
     this.users.set(1, defaultUser);

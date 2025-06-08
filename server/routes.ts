@@ -13,9 +13,12 @@ interface WebSocketMessage {
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
-  // Initialize VIPER Engine for user 1 (demo user)
+  // Initialize VIPER Engine for user 1 (demo user) - Autonomous Trading
   const viperEngine = new ViperEngine(1);
   await viperEngine.initialize();
+  
+  // Store VIPER engine instance for route access
+  let globalViperEngine = viperEngine;
   
   // Initialize WebSocket server for real-time price updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
