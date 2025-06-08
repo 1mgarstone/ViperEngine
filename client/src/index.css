@@ -2,6 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile optimization and touch handling */
+html, body {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  min-height: 100vh;
+  height: 100%;
+  position: relative;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Ensure proper mobile viewport handling */
+* {
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+}
+
+/* Allow text selection for inputs and content areas */
+input, textarea, [contenteditable], button, a {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  touch-action: manipulation;
+}
+
+/* Mobile-friendly scrolling */
+.mobile-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+}
+
+.mobile-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsive containers */
+.container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1200px;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
 :root {
   --background: hsl(222, 84%, 5%);
   --foreground: hsl(210, 40%, 98%);
