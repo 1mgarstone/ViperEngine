@@ -163,6 +163,24 @@ export const insertViperTradeSchema = createInsertSchema(viperTrades).omit({
   exitTime: true,
 });
 
+export const dashboardWidgets = pgTable("dashboard_widgets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  widgetType: text("widget_type").notNull(), // 'balance' | 'viperStatus' | 'recentTrades' | 'performance' | 'marketData' | 'profitChart'
+  position: integer("position").notNull().default(0),
+  isVisible: boolean("is_visible").notNull().default(true),
+  size: text("size").notNull().default("medium"), // 'small' | 'medium' | 'large'
+  config: text("config"), // JSON string for widget-specific settings
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -190,3 +208,6 @@ export type InsertLiquidationCluster = z.infer<typeof insertLiquidationClusterSc
 
 export type ViperTrade = typeof viperTrades.$inferSelect;
 export type InsertViperTrade = z.infer<typeof insertViperTradeSchema>;
+
+export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
+export type InsertDashboardWidget = z.infer<typeof insertDashboardWidgetSchema>;

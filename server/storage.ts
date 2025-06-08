@@ -8,7 +8,8 @@ import {
   type RiskSettings, type InsertRiskSettings,
   type ViperSettings, type InsertViperSettings,
   type LiquidationCluster, type InsertLiquidationCluster,
-  type ViperTrade, type InsertViperTrade
+  type ViperTrade, type InsertViperTrade,
+  dashboardWidgets, type DashboardWidget, type InsertDashboardWidget
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -61,6 +62,13 @@ export interface IStorage {
   getActiveViperTrades(userId: number): Promise<ViperTrade[]>;
   getUserViperTrades(userId: number): Promise<ViperTrade[]>;
   updateViperTrade(id: number, updates: Partial<ViperTrade>): Promise<ViperTrade>;
+
+  // Dashboard widget operations
+  getUserWidgets(userId: number): Promise<DashboardWidget[]>;
+  createWidget(widget: InsertDashboardWidget): Promise<DashboardWidget>;
+  updateWidget(id: number, updates: Partial<DashboardWidget>): Promise<DashboardWidget>;
+  deleteWidget(id: number): Promise<void>;
+  reorderWidgets(userId: number, widgetOrders: { id: number; position: number }[]): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
