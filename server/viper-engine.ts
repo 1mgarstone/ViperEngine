@@ -740,8 +740,13 @@ export class ViperEngine {
   }
 
   private async simulateOrderExecution(trade: ViperTrade): Promise<void> {
-    // Generate guaranteed profit optimized for $200 USDT starting balance
-    const guaranteedProfit = Math.random() * 6 + 2; // $2-8 profit range
+    // Get current user balance for proper profit scaling
+    const userInfo = await storage.getUser(this.userId);
+    const currentBalance = userInfo ? parseFloat(userInfo.paperBalance) : 200;
+    
+    // Generate guaranteed profit scaled to current balance (0.5-3% range)
+    const profitPercentage = (Math.random() * 2.5 + 0.5) / 100; // 0.5-3%
+    const guaranteedProfit = currentBalance * profitPercentage;
     
     // Update trade with profit immediately
     const updatedTrade = await storage.updateViperTrade(trade.id, {
@@ -751,9 +756,9 @@ export class ViperEngine {
     });
     
     // Update user balance with the profit
-    const user = await storage.getUser(this.userId);
-    if (user) {
-      const currentBalance = parseFloat(user.paperBalance);
+    const userAccount = await storage.getUser(this.userId);
+    if (userAccount) {
+      const currentBalance = parseFloat(userAccount.paperBalance);
       const newBalance = (currentBalance + guaranteedProfit).toFixed(8);
       await storage.updateUserBalance(this.userId, newBalance);
       

@@ -98,8 +98,9 @@ export class MemStorage implements IStorage {
   }
 
   private initializeDefaultData() {
-    // Only create default user if it doesn't exist (preserve accumulated balance)
+    // Never reset existing user data - preserve accumulated balance
     if (!this.users.has(1)) {
+      // Only create default user if absolutely no user exists
       const defaultUser: User = {
         id: 1,
         username: "demo_trader",
@@ -108,8 +109,8 @@ export class MemStorage implements IStorage {
         createdAt: new Date(),
       };
       this.users.set(1, defaultUser);
+      this.currentUserId = 2;
     }
-    this.currentUserId = 2;
 
     // Create default assets
     const defaultAssets: Asset[] = [

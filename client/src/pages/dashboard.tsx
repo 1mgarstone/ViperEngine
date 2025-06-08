@@ -136,6 +136,7 @@ export default function Dashboard() {
   
   // Calculate total profits since starting at $200
   const totalProfit = currentBalance - 200;
+  const profitPercentage = ((currentBalance - 200) / 200) * 100;
 
   const renderTabContent = () => {
     switch (activeTab) {
