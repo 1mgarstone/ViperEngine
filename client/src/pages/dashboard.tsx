@@ -50,11 +50,9 @@ export default function Dashboard() {
   const [showQuickActions, setShowQuickActions] = useState(false);
   
   const tabs = [
-    { id: "dashboard", label: "Home", icon: Home, color: "blue" },
-    { id: "trade", label: "Trade", icon: TrendingUp, color: "green" },
-    { id: "portfolio", label: "Portfolio", icon: BarChart3, color: "purple" },
-    { id: "risk", label: "Risk", icon: Shield, color: "yellow" },
-    { id: "viper", label: "VIPER", icon: Zap, color: "orange" }
+    { id: "dashboard", label: "Overview", icon: Home, color: "blue" },
+    { id: "viper", label: "VIPER Strike", icon: Zap, color: "orange" },
+    { id: "portfolio", label: "Portfolio", icon: BarChart3, color: "purple" }
   ];
   
   const currentTabIndex = tabs.findIndex(tab => tab.id === activeTab);
@@ -119,154 +117,112 @@ export default function Dashboard() {
     switch (activeTab) {
       case "dashboard":
         return (
-          <div className="space-y-3 pb-20">
-            {/* Portfolio Section - Collapsible */}
-            <Collapsible open={portfolioExpanded} onOpenChange={setPortfolioExpanded}>
-              <Card className="bg-gray-800 border-gray-700">
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="pb-3 hover:bg-gray-750 transition-colors">
-                    <CardTitle className="text-white text-lg flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <DollarSign className="h-5 w-5 text-green-400" />
-                        <span>Portfolio</span>
-                        <Badge className="px-2 py-1 text-xs bg-green-600 text-white">$100K</Badge>
-                      </div>
-                      {portfolioExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-xs text-gray-400">Balance</div>
-                        <div className="font-mono text-lg text-green-400">$100,000</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-400">P&L</div>
-                        <div className="font-mono text-lg text-gray-400">$0.00</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-400">Positions</div>
-                        <div className="font-mono text-lg text-white">0</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-400">Status</div>
-                        <div className="flex items-center space-x-1">
-                          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-                          <span className="text-sm text-gray-300">{isConnected ? 'Live' : 'Off'}</span>
-                        </div>
-                      </div>
+          <div className="space-y-4 pb-20">
+            {/* VIPER Strike Quick Launch */}
+            <Card className="bg-gradient-to-br from-orange-600 to-red-600 border-orange-500">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-xl flex items-center space-x-3">
+                  <Zap className="h-6 w-6" />
+                  <span>VIPER Strike Bot</span>
+                  <Badge className="px-3 py-1 text-sm bg-black/30 text-white">Autonomous</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <div className="text-xs text-orange-100">Balance</div>
+                    <div className="font-mono text-lg text-white">$100 USDT</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-orange-100">Status</div>
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
+                      <span className="text-white font-medium">{isConnected ? 'Ready' : 'Connecting'}</span>
                     </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+                  </div>
+                </div>
+                
+                <div className="bg-black/20 rounded-lg p-4 mb-4">
+                  <div className="text-orange-100 text-sm mb-2">Select Trading Token:</div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {marketData?.slice(0, 8).map((asset: any) => (
+                      <button
+                        key={asset.symbol}
+                        onClick={() => setSelectedAsset(asset.symbol)}
+                        className={`p-2 rounded-lg text-sm font-medium transition-all ${
+                          selectedAsset === asset.symbol 
+                            ? 'bg-white text-orange-600' 
+                            : 'bg-orange-500/30 text-white hover:bg-orange-500/50'
+                        }`}
+                      >
+                        {asset.symbol}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => setActiveTab("viper")}
+                  className="w-full bg-white text-orange-600 font-bold py-3 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Zap className="h-5 w-5" />
+                  <span>Launch VIPER Strike on {selectedAsset}</span>
+                </button>
+              </CardContent>
+            </Card>
 
-            {/* Market Overview - Collapsible */}
-            <Collapsible open={marketExpanded} onOpenChange={setMarketExpanded}>
-              <Card className="bg-gray-800 border-gray-700">
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="pb-3 hover:bg-gray-750 transition-colors">
-                    <CardTitle className="text-white text-lg flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Activity className="h-5 w-5 text-blue-400" />
-                        <span>Market Data</span>
-                        <Badge className="px-2 py-1 text-xs bg-blue-600 text-white">{marketData?.length || 0} Assets</Badge>
-                      </div>
-                      {marketExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <MarketData 
-                      marketData={marketData || []}
-                      onAssetSelect={setSelectedAsset}
-                      selectedAsset={selectedAsset}
-                    />
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+            {/* Portfolio Overview */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-lg flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-blue-400" />
+                  <span>Portfolio Performance</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-400">Total Value</div>
+                    <div className="font-mono text-lg text-white">$100.00</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">P&L Today</div>
+                    <div className="font-mono text-lg text-green-400">+$0.00</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Active Positions</div>
+                    <div className="font-mono text-lg text-white">0</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-400">Success Rate</div>
+                    <div className="font-mono text-lg text-blue-400">0%</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Trading Chart - Collapsible */}
-            <Collapsible open={chartExpanded} onOpenChange={setChartExpanded}>
-              <Card className="bg-gray-800 border-gray-700">
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="pb-3 hover:bg-gray-750 transition-colors">
-                    <CardTitle className="text-white text-lg flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <BarChart3 className="h-5 w-5 text-purple-400" />
-                        <span>{selectedAsset}/USDT Chart</span>
-                        <Badge className="px-2 py-1 text-xs bg-purple-600 text-white">
-                          ${selectedAssetData?.currentPrice || "---"}
-                        </Badge>
-                      </div>
-                      {chartExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <TradingChart 
-                      symbol={selectedAsset}
-                      currentPrice={selectedAssetData?.currentPrice}
-                    />
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
+            {/* Market Overview */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white text-lg flex items-center space-x-2">
+                  <Activity className="h-5 w-5 text-purple-400" />
+                  <span>Live Market Data</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <MarketData 
+                  marketData={marketData || []}
+                  onAssetSelect={setSelectedAsset}
+                  selectedAsset={selectedAsset}
+                />
+              </CardContent>
+            </Card>
 
-            {/* Recent Orders - Collapsible */}
-            <Collapsible open={ordersExpanded} onOpenChange={setOrdersExpanded}>
-              <Card className="bg-gray-800 border-gray-700">
-                <CollapsibleTrigger className="w-full">
-                  <CardHeader className="pb-3 hover:bg-gray-750 transition-colors">
-                    <CardTitle className="text-white text-lg flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Clock className="h-5 w-5 text-orange-400" />
-                        <span>Recent Orders</span>
-                        <Badge className="px-2 py-1 text-xs bg-orange-600 text-white">
-                          {(ordersData as any[])?.length || 0}
-                        </Badge>
-                      </div>
-                      {ordersExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </CardTitle>
-                  </CardHeader>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    {(ordersData as any[])?.length > 0 ? (
-                      <div className="space-y-2">
-                        {(ordersData as any[]).slice(0, 5).map((order: any) => (
-                          <div key={order.id} className="flex items-center justify-between p-3 bg-gray-700 rounded">
-                            <div>
-                              <div className="font-medium text-sm text-white">{order.symbol}</div>
-                              <div className="text-xs text-gray-400">{order.side} • ${order.price}</div>
-                            </div>
-                            <Badge className="text-xs" variant={order.status === 'filled' ? 'default' : 'secondary'}>
-                              {order.status}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6">
-                        <p className="text-gray-400 text-sm">No orders yet</p>
-                        <p className="text-gray-500 text-xs">Start trading to see orders</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-
-            {/* Educational Alert */}
-            <Alert className="border-orange-500 bg-orange-500/10 mb-20">
-              <TriangleAlert className="h-4 w-4 text-orange-400" />
+            {/* Quick Start Guide */}
+            <Alert className="border-blue-500 bg-blue-500/10 mb-20">
+              <Zap className="h-4 w-4 text-blue-400" />
               <AlertDescription className="text-gray-300 text-sm">
-                <strong>Demo Mode:</strong> Virtual funds only - no real money at risk.
+                <strong>Quick Start:</strong> Select a token above, then tap "VIPER Strike" to activate autonomous trading with advanced liquidation detection.
               </AlertDescription>
             </Alert>
           </div>

@@ -2,16 +2,13 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Target, Shield, TrendingUp, Activity, AlertTriangle, Play, Square } from "lucide-react";
+import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -53,355 +50,302 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   // State for form inputs
   const [isEnabled, setIsEnabled] = useState(false);
   const [maxLeverage, setMaxLeverage] = useState([125]);
-  const [volThreshold, setVolThreshold] = useState("0.008");
-  const [strikeWindow, setStrikeWindow] = useState("0.170");
-  const [profitTarget, setProfitTarget] = useState("2.00");
-  const [stopLoss, setStopLoss] = useState("0.100");
-  const [clusterThreshold, setClusterThreshold] = useState("0.005");
-  const [positionScaling, setPositionScaling] = useState("1.00");
-  const [maxConcurrentTrades, setMaxConcurrentTrades] = useState([2]);
-  const [balanceMultiplier, setBalanceMultiplier] = useState("2.00");
+  const [profitTarget, setProfitTarget] = useState("3.50");
+  const [stopLoss, setStopLoss] = useState("0.80");
+  const [maxTrades, setMaxTrades] = useState([5]);
+  const [balanceMultiplier, setBalanceMultiplier] = useState("3.00");
 
   // Fetch VIPER settings
-  const { data: viperSettings } = useQuery<ViperSettings>({
+  const { data: settingsData } = useQuery({
     queryKey: [`/api/viper-settings/${userId}`],
   });
 
   // Fetch VIPER performance
-  const { data: viperPerformance } = useQuery<ViperPerformance>({
+  const { data: performanceData } = useQuery<ViperPerformance>({
     queryKey: [`/api/viper-performance/${userId}`],
-    refetchInterval: 5000,
-  });
-
-  // Fetch active VIPER trades
-  const { data: activeTrades } = useQuery<any[]>({
-    queryKey: [`/api/viper-trades/${userId}`],
     refetchInterval: 3000,
   });
 
-  // Update state when settings are loaded
-  useEffect(() => {
-    if (viperSettings) {
-      setIsEnabled(viperSettings.isEnabled || false);
-      setMaxLeverage([viperSettings.maxLeverage || 125]);
-      setVolThreshold(viperSettings.volThreshold || "0.008");
-      setStrikeWindow(viperSettings.strikeWindow || "0.170");
-      setProfitTarget(viperSettings.profitTarget || "2.00");
-      setStopLoss(viperSettings.stopLoss || "0.100");
-      setClusterThreshold(viperSettings.clusterThreshold || "0.005");
-      setPositionScaling(viperSettings.positionScaling || "1.00");
-      setMaxConcurrentTrades([viperSettings.maxConcurrentTrades || 2]);
-      setBalanceMultiplier(viperSettings.balanceMultiplier || "2.00");
-    }
-  }, [viperSettings]);
+  // Fetch VIPER trades
+  const { data: tradesData } = useQuery({
+    queryKey: [`/api/viper-trades/${userId}`],
+    refetchInterval: 2000,
+  });
 
-  // Update VIPER settings mutation
+  // Fetch VIPER autonomous status
+  const { data: viperStatus } = useQuery<ViperStatus>({
+    queryKey: ["/api/viper-status"],
+    refetchInterval: 1000,
+  });
+
+  // Update form when settings data loads
+  useEffect(() => {
+    if (settingsData) {
+      setIsEnabled(settingsData.isEnabled);
+      setMaxLeverage([settingsData.maxLeverage]);
+      setProfitTarget(settingsData.profitTarget);
+      setStopLoss(settingsData.stopLoss);
+      setMaxTrades([settingsData.maxConcurrentTrades]);
+      setBalanceMultiplier(settingsData.balanceMultiplier);
+    }
+  }, [settingsData]);
+
+  // Update settings mutation
   const updateSettingsMutation = useMutation({
-    mutationFn: async (settingsData: any) => {
-      const response = await fetch(`/api/viper-settings`, {
+    mutationFn: async (settings: any) => {
+      return apiRequest("/api/viper-settings", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(settingsData),
+        body: JSON.stringify({
+          userId,
+          maxLeverage: maxLeverage[0],
+          volThreshold: "0.003",
+          strikeWindow: "0.250",
+          profitTarget,
+          stopLoss,
+          clusterThreshold: "0.002",
+          positionScaling: "1.50",
+          maxConcurrentTrades: maxTrades[0],
+          balanceMultiplier,
+          isEnabled,
+        }),
       });
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/viper-settings/${userId}`] });
       toast({
-        title: "VIPER Settings Updated",
-        description: "Your liquidation strike configuration has been saved.",
+        title: "Settings Updated",
+        description: "VIPER strategy settings have been saved.",
       });
     },
-    onError: () => {
+  });
+
+  // Start/Stop autonomous trading
+  const controlTradingMutation = useMutation({
+    mutationFn: async (action: "start" | "stop") => {
+      return apiRequest(`/api/viper-control/${action}`, {
+        method: "POST",
+      });
+    },
+    onSuccess: (data: any, action) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/viper-status"] });
       toast({
-        title: "Update Failed",
-        description: "Failed to update VIPER settings. Please try again.",
-        variant: "destructive",
+        title: action === "start" ? "VIPER Started" : "VIPER Stopped",
+        description: data.message,
+        variant: action === "start" ? "default" : "destructive",
       });
     },
   });
 
   const handleSaveSettings = () => {
-    const settingsData = {
-      userId,
-      isEnabled,
-      maxLeverage: maxLeverage[0],
-      volThreshold,
-      strikeWindow,
-      profitTarget,
-      stopLoss,
-      clusterThreshold,
-      positionScaling,
-      maxConcurrentTrades: maxConcurrentTrades[0],
-      balanceMultiplier,
-    };
-
-    updateSettingsMutation.mutate(settingsData);
+    updateSettingsMutation.mutate({});
   };
 
+  const handleStartStop = (action: "start" | "stop") => {
+    controlTradingMutation.mutate(action);
+  };
+
+  const isRunning = viperStatus?.isRunning || false;
+  const activeTrades = tradesData?.filter((t: any) => t.status === 'open')?.length || 0;
+
   return (
-    <div className="space-y-6">
-      {/* VIPER Header */}
-      <Card className="trading-bg-slate border-gray-700">
+    <div className="space-y-6 pb-20">
+      {/* VIPER Control Panel */}
+      <Card className="bg-gradient-to-br from-orange-600 to-red-600 border-orange-500">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
-                <Zap className="h-6 w-6 text-trading-orange" />
-                <CardTitle className="text-xl text-white">VIPER Strike</CardTitle>
+          <CardTitle className="text-white text-2xl flex items-center space-x-3">
+            <Zap className="h-8 w-8" />
+            <span>VIPER Strike Control</span>
+            <Badge className={`px-3 py-1 text-sm ${isRunning ? 'bg-green-500' : 'bg-gray-500'}`}>
+              {isRunning ? 'ACTIVE' : 'STANDBY'}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-black/20 rounded-lg p-4">
+              <div className="text-orange-100 text-sm">Trading Cycles</div>
+              <div className="text-white text-2xl font-mono">{viperStatus?.cycleCount || 0}</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-4">
+              <div className="text-orange-100 text-sm">Success Rate</div>
+              <div className="text-white text-2xl font-mono">{((viperStatus?.successRate || 0) * 100).toFixed(1)}%</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-4">
+              <div className="text-orange-100 text-sm">Active Positions</div>
+              <div className="text-white text-2xl font-mono">{activeTrades}</div>
+            </div>
+            <div className="bg-black/20 rounded-lg p-4">
+              <div className="text-orange-100 text-sm">Total P&L</div>
+              <div className={`text-2xl font-mono ${(viperStatus?.profitability || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${(viperStatus?.profitability || 0).toFixed(2)}
               </div>
-              <Badge className={`px-3 py-1 text-xs font-semibold ${
-                isEnabled ? 'bg-trading-green text-white' : 'bg-gray-600 text-gray-300'
-              }`}>
-                {isEnabled ? 'ACTIVE' : 'DISABLED'}
-              </Badge>
-              {viperPerformance && (
-                <div className="text-right">
-                  <div className="text-sm text-gray-400">Performance</div>
-                  <div className={`font-mono font-semibold ${
-                    (viperPerformance.totalPnL || 0) >= 0 ? 'text-trading-green' : 'text-trading-red'
-                  }`}>
-                    {(viperPerformance.totalPnL || 0) >= 0 ? '+' : ''}${(viperPerformance.totalPnL || 0).toFixed(2)}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
-        </CardHeader>
+
+          <div className="flex space-x-3">
+            <Button
+              onClick={() => handleStartStop("start")}
+              disabled={isRunning || controlTradingMutation.isPending}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3"
+            >
+              <Play className="h-5 w-5 mr-2" />
+              Start VIPER Bot
+            </Button>
+            
+            <Button
+              onClick={() => handleStartStop("stop")}
+              disabled={!isRunning || controlTradingMutation.isPending}
+              variant="destructive"
+              className="flex-1 font-bold py-3"
+            >
+              <Square className="h-5 w-5 mr-2" />
+              Stop Bot
+            </Button>
+          </div>
+        </CardContent>
       </Card>
 
-      <Tabs defaultValue="settings" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-800">
-          <TabsTrigger value="settings" className="text-white">Strategy Settings</TabsTrigger>
-          <TabsTrigger value="performance" className="text-white">Performance</TabsTrigger>
-          <TabsTrigger value="trades" className="text-white">Active Trades</TabsTrigger>
-        </TabsList>
+      {/* Strategy Configuration */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center space-x-2">
+            <Target className="h-5 w-5 text-blue-400" />
+            <span>Strategy Settings</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Leverage Control */}
+          <div>
+            <Label className="text-white mb-2 block">Maximum Leverage: {maxLeverage[0]}x</Label>
+            <Slider
+              value={maxLeverage}
+              onValueChange={setMaxLeverage}
+              max={125}
+              min={1}
+              step={1}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-gray-400 mt-1">
+              <span>1x</span>
+              <span>125x</span>
+            </div>
+          </div>
 
-        <TabsContent value="settings">
-          <Card className="trading-bg-slate border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <Target className="h-5 w-5 text-trading-orange" />
-                <span>Liquidation Strike Configuration</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Enable/Disable Switch */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-white text-base font-semibold">Enable VIPER Strike</Label>
-                  <p className="text-sm text-gray-400">Activate automated liquidation cluster trading</p>
-                </div>
-                <Switch
-                  checked={isEnabled}
-                  onCheckedChange={setIsEnabled}
-                />
-              </div>
+          {/* Profit Target */}
+          <div>
+            <Label className="text-white mb-2 block">Profit Target (%)</Label>
+            <Input
+              value={profitTarget}
+              onChange={(e) => setProfitTarget(e.target.value)}
+              placeholder="3.50"
+              className="bg-gray-700 border-gray-600 text-white"
+            />
+          </div>
 
-              <Separator className="bg-gray-600" />
+          {/* Stop Loss */}
+          <div>
+            <Label className="text-white mb-2 block">Stop Loss (%)</Label>
+            <Input
+              value={stopLoss}
+              onChange={(e) => setStopLoss(e.target.value)}
+              placeholder="0.80"
+              className="bg-gray-700 border-gray-600 text-white"
+            />
+          </div>
 
-              {/* Leverage Settings */}
-              <div className="space-y-3">
-                <Label className="text-white text-sm font-semibold">Maximum Leverage: {maxLeverage[0]}x</Label>
-                <Slider
-                  value={maxLeverage}
-                  onValueChange={setMaxLeverage}
-                  max={125}
-                  min={1}
-                  step={5}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>1x</span>
-                  <span>125x</span>
-                </div>
-              </div>
+          {/* Max Concurrent Trades */}
+          <div>
+            <Label className="text-white mb-2 block">Max Concurrent Trades: {maxTrades[0]}</Label>
+            <Slider
+              value={maxTrades}
+              onValueChange={setMaxTrades}
+              max={10}
+              min={1}
+              step={1}
+              className="w-full"
+            />
+          </div>
 
-              {/* Trading Parameters */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-white text-sm">Volatility Threshold</Label>
-                  <Input
-                    value={volThreshold}
-                    onChange={(e) => setVolThreshold(e.target.value)}
-                    placeholder="0.008"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white text-sm">Strike Window (s)</Label>
-                  <Input
-                    value={strikeWindow}
-                    onChange={(e) => setStrikeWindow(e.target.value)}
-                    placeholder="0.170"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white text-sm">Profit Target (%)</Label>
-                  <Input
-                    value={profitTarget}
-                    onChange={(e) => setProfitTarget(e.target.value)}
-                    placeholder="2.00"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white text-sm">Stop Loss (%)</Label>
-                  <Input
-                    value={stopLoss}
-                    onChange={(e) => setStopLoss(e.target.value)}
-                    placeholder="0.100"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-              </div>
+          {/* Balance Multiplier */}
+          <div>
+            <Label className="text-white mb-2 block">Position Size (%)</Label>
+            <Input
+              value={balanceMultiplier}
+              onChange={(e) => setBalanceMultiplier(e.target.value)}
+              placeholder="3.00"
+              className="bg-gray-700 border-gray-600 text-white"
+            />
+          </div>
 
-              {/* Position Management */}
-              <div className="space-y-3">
-                <Label className="text-white text-sm font-semibold">Max Concurrent Trades: {maxConcurrentTrades[0]}</Label>
-                <Slider
-                  value={maxConcurrentTrades}
-                  onValueChange={setMaxConcurrentTrades}
-                  max={5}
-                  min={1}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
+          <Button
+            onClick={handleSaveSettings}
+            disabled={updateSettingsMutation.isPending}
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            Save Configuration
+          </Button>
+        </CardContent>
+      </Card>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-white text-sm">Cluster Threshold</Label>
-                  <Input
-                    value={clusterThreshold}
-                    onChange={(e) => setClusterThreshold(e.target.value)}
-                    placeholder="0.005"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-white text-sm">Balance Multiplier</Label>
-                  <Input
-                    value={balanceMultiplier}
-                    onChange={(e) => setBalanceMultiplier(e.target.value)}
-                    placeholder="2.00"
-                    className="bg-gray-700 border-gray-600 text-white"
-                  />
-                </div>
-              </div>
-
-              {/* Save Button */}
-              <Button
-                onClick={handleSaveSettings}
-                disabled={updateSettingsMutation.isPending}
-                className="w-full bg-trading-orange hover:bg-trading-orange/80 text-white"
-              >
-                {updateSettingsMutation.isPending ? "Saving..." : "Save VIPER Configuration"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="performance">
-          <Card className="trading-bg-slate border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-trading-green" />
-                <span>Strategy Performance</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {viperPerformance ? (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-gray-400">Total P&L</div>
-                    <div className={`text-lg font-bold ${
-                      (viperPerformance.totalPnL || 0) >= 0 ? 'text-trading-green' : 'text-trading-red'
-                    }`}>
-                      {(viperPerformance.totalPnL || 0) >= 0 ? '+' : ''}${(viperPerformance.totalPnL || 0).toFixed(2)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-400">Win Rate</div>
-                    <div className="text-lg font-bold text-white">
-                      {((viperPerformance.winRate || 0) * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-400">Total Trades</div>
-                    <div className="text-lg font-bold text-white">
-                      {viperPerformance.totalTrades || 0}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-400">Active Trades</div>
-                    <div className="text-lg font-bold text-trading-orange">
-                      {viperPerformance.activeTrades || 0}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-400">No performance data available</p>
-                  <p className="text-sm text-gray-500">Enable VIPER Strike to start collecting performance metrics</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="trades">
-          <Card className="trading-bg-slate border-gray-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-trading-blue" />
-                <span>Active Trades</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {activeTrades && activeTrades.length > 0 ? (
-                <div className="space-y-3">
-                  {activeTrades.map((trade: any, index: number) => (
-                    <div key={index} className="p-4 bg-gray-700 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <div className="font-semibold text-white">{trade.instId}</div>
-                          <div className="text-sm text-gray-400">{trade.side.toUpperCase()} • {trade.quantity} units</div>
-                        </div>
-                        <div className="text-right">
-                          <div className={`font-bold ${
-                            parseFloat(trade.pnl || "0") >= 0 ? 'text-trading-green' : 'text-trading-red'
-                          }`}>
-                            {parseFloat(trade.pnl || "0") >= 0 ? '+' : ''}${parseFloat(trade.pnl || "0").toFixed(2)}
-                          </div>
-                          <div className="text-sm text-gray-400">{trade.status}</div>
-                        </div>
+      {/* Active Trades */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center space-x-2">
+            <Activity className="h-5 w-5 text-green-400" />
+            <span>Active Trades</span>
+            <Badge className="bg-green-600">{activeTrades}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tradesData && tradesData.length > 0 ? (
+            <div className="space-y-3">
+              {tradesData.filter((trade: any) => trade.status === 'open').map((trade: any) => (
+                <div key={trade.id} className="bg-gray-700 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-medium">{trade.instId}</div>
+                      <div className="text-xs text-gray-400">
+                        {trade.side.toUpperCase()} • {trade.leverage}x leverage
                       </div>
                     </div>
-                  ))}
+                    <Badge className={trade.side === 'long' ? 'bg-green-600' : 'bg-red-600'}>
+                      ${parseFloat(trade.entryPrice).toFixed(2)}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <div className="text-gray-400">Quantity</div>
+                      <div className="text-white">{parseFloat(trade.quantity).toFixed(4)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400">Target</div>
+                      <div className="text-green-400">${parseFloat(trade.takeProfitPrice || '0').toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-400">Stop</div>
+                      <div className="text-red-400">${parseFloat(trade.stopLossPrice || '0').toFixed(2)}</div>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-400">No active trades</p>
-                  <p className="text-sm text-gray-500">VIPER will automatically detect and execute liquidation strikes</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Activity className="h-12 w-12 text-gray-500 mx-auto mb-4" />
+              <div className="text-gray-400">No active trades</div>
+              <div className="text-gray-500 text-sm">Start the VIPER bot to begin trading</div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Educational Alert */}
-      <Alert className="border-trading-orange bg-trading-orange/10">
-        <AlertTriangle className="h-4 w-4 text-trading-orange" />
-        <AlertDescription className="text-gray-300">
-          <strong>Educational Notice:</strong> VIPER Strike is a sophisticated algorithmic trading strategy simulation.
-          This demonstrates liquidation cluster detection and automated execution concepts using virtual funds for learning purposes.
+      {/* Performance Alert */}
+      <Alert className="border-green-500 bg-green-500/10">
+        <DollarSign className="h-4 w-4 text-green-400" />
+        <AlertDescription className="text-gray-300 text-sm">
+          <strong>VIPER Strike:</strong> Advanced liquidation detection with 125x leverage capabilities. 
+          Autonomous trading optimized for maximum profit extraction from market volatility.
         </AlertDescription>
       </Alert>
     </div>
