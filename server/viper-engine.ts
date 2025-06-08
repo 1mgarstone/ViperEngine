@@ -878,11 +878,11 @@ export class ViperEngine {
     // Update user balance - guaranteed increase only (preserve accumulated profits)
     const user = await storage.getUser(this.userId);
     if (user) {
-      const currentBalance = parseFloat(user.paperBalance);
+      const currentBalance = parseFloat(await storage.getCurrentBalance(this.userId));
       // Only add the actual profit, don't modify margin calculations
       const newBalance = currentBalance + Math.abs(finalPnL);
       
-      await storage.updateUserBalance(this.userId, newBalance.toFixed(8));
+      await storage.updateCurrentBalance(this.userId, newBalance.toFixed(8));
       console.log(`💰 Balance Update: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)} (+$${Math.abs(finalPnL).toFixed(2)})`);
     }
     
@@ -923,7 +923,7 @@ export class ViperEngine {
     const user = await storage.getUser(this.userId);
     if (!user) return;
     
-    const currentBalance = parseFloat(user.paperBalance);
+    const currentBalance = parseFloat(await storage.getCurrentBalance(this.userId));
     
     // High-frequency micro-profit generation (smaller but more frequent)
     const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
@@ -969,7 +969,7 @@ export class ViperEngine {
     
     // Update balance with micro-profit
     const newBalance = (currentBalance + guaranteedMicroProfit).toFixed(8);
-    await storage.updateUserBalance(this.userId, newBalance);
+    await storage.updateCurrentBalance(this.userId, newBalance);
     
     console.log(`⚡ Micro-Profit: +$${guaranteedMicroProfit.toFixed(2)} on ${selectedAsset} (${microLeverage}x)`);
     
@@ -998,7 +998,7 @@ export class ViperEngine {
     const user = await storage.getUser(this.userId);
     if (!user) return;
     
-    const currentBalance = parseFloat(user.paperBalance);
+    const currentBalance = parseFloat(await storage.getCurrentBalance(this.userId));
     
     // Advanced liquidation cluster simulation with dynamic sizing
     const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
@@ -1104,7 +1104,7 @@ export class ViperEngine {
     
     // Update user balance immediately with profit
     const newBalance = (currentBalance + guaranteedProfit).toFixed(8);
-    await storage.updateUserBalance(this.userId, newBalance);
+    await storage.updateCurrentBalance(this.userId, newBalance);
     
     console.log(`💰 VIPER Strike: +$${guaranteedProfit.toFixed(2)} profit on ${selectedAsset}`);
     console.log(`💰 Leverage: ${optimalLeverage}x | Cluster: $${clusterValue.toFixed(0)} | Position: $${positionSize.toFixed(2)}`);

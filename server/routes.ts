@@ -508,5 +508,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Live trading environment routes
+  app.post("/api/user/:userId/toggle-live", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { isLive } = req.body;
+      const user = await storage.toggleLiveMode(userId, isLive);
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/:userId/exchange-credentials", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { apiKey, apiSecret, apiPassphrase, exchangeName } = req.body;
+      
+      // Basic validation
+      if (!apiKey || !apiSecret || !exchangeName) {
+        return res.status(400).json({ message: "API key, secret, and exchange name are required" });
+      }
+
+      const user = await storage.updateExchangeCredentials(userId, {
+        apiKey,
+        apiSecret,
+        apiPassphrase,
+        exchangeName,
+      });
+      
+      // Don't return sensitive credentials in response
+      const { apiKey: _, apiSecret: __, apiPassphrase: ___, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/user/:userId/balance", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const balance = await storage.getCurrentBalance(userId);
+      res.json({ balance });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/:userId/balance", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { balance } = req.body;
+      const user = await storage.updateCurrentBalance(userId, balance);
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
