@@ -15,18 +15,22 @@ interface BalanceUpdate {
   newBalance: number;
   profit: number;
   trade: string;
+  leverage?: number;
+  clusterValue?: number;
 }
 
 interface UseWebSocketReturn {
   marketData: MarketData[] | null;
   isConnected: boolean;
   connectionError: string | null;
+  liveBalance: number | null;
 }
 
 export function useWebSocket(): UseWebSocketReturn {
   const [marketData, setMarketData] = useState<MarketData[] | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [liveBalance, setLiveBalance] = useState<number | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
@@ -55,9 +59,18 @@ export function useWebSocket(): UseWebSocketReturn {
             const balanceUpdate: BalanceUpdate = message.data;
             console.log(`💰 Live Update: +$${balanceUpdate.profit.toFixed(2)} profit on ${balanceUpdate.trade}`);
             
-            // Invalidate user data cache to force refresh with new balance
+            // Update local state immediately for instant UI updates
+            setLiveBalance(balanceUpdate.newBalance);
+            
+            // Force cache invalidation and immediate refetch for all user-related data
             queryClient.invalidateQueries({ queryKey: ["/api/user/1"] });
             queryClient.invalidateQueries({ queryKey: ["/api/viper-trades/1"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/viper-performance/1"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/portfolio/1"] });
+            
+            // Force immediate refetch to bypass cache
+            queryClient.refetchQueries({ queryKey: ["/api/user/1"] });
+            queryClient.refetchQueries({ queryKey: ["/api/viper-trades/1"] });
           }
         } catch (error) {
           console.error("Error parsing WebSocket message:", error);
@@ -107,5 +120,6 @@ export function useWebSocket(): UseWebSocketReturn {
     marketData,
     isConnected,
     connectionError,
+    liveBalance,
   };
 }

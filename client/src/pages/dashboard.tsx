@@ -93,8 +93,12 @@ export default function Dashboard() {
   // Fetch user data with live balance updates
   const { data: userData, refetch: refetchUserData } = useQuery({
     queryKey: ["/api/user/1"],
-    refetchInterval: 300, // Refresh every 300ms for immediate balance updates
+    refetchInterval: 100, // Refresh every 100ms for instant balance updates
     staleTime: 0, // Always consider data stale for live updates
+    gcTime: 0, // No cache retention
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
   });
 
   // Fetch portfolio data
