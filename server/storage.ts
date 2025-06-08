@@ -571,7 +571,7 @@ export class DatabaseStorage implements IStorage {
     const [position] = await db
       .select()
       .from(portfolioPositions)
-      .where(eq(portfolioPositions.userId, userId) && eq(portfolioPositions.assetId, assetId));
+      .where(and(eq(portfolioPositions.userId, userId), eq(portfolioPositions.assetId, assetId)));
     return position || undefined;
   }
 
@@ -713,8 +713,7 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(viperTrades)
-      .where(eq(viperTrades.userId, userId))
-      .where(eq(viperTrades.status, 'active'));
+      .where(and(eq(viperTrades.userId, userId), eq(viperTrades.status, 'active')));
   }
 
   async getUserViperTrades(userId: number): Promise<ViperTrade[]> {
