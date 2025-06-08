@@ -16,7 +16,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { TriangleAlert, ChartBarIcon, ShieldCheckIcon, GraduationCapIcon } from "lucide-react";
 
 export default function Dashboard() {
-  const [showEducationalModal, setShowEducationalModal] = useState(true);
+  const [showEducationalModal, setShowEducationalModal] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState("BTC");
   
   // WebSocket connection for real-time data
