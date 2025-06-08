@@ -18,6 +18,9 @@ interface User {
   liveBalance: string;
   isLiveMode: boolean;
   exchangeName?: string;
+  apiKey?: string;
+  apiSecret?: string;
+  apiPassphrase?: string;
 }
 
 interface LiveTradingSwitchProps {
@@ -41,10 +44,13 @@ export function LiveTradingSwitch({ userId }: LiveTradingSwitchProps) {
 
   const toggleLiveMode = useMutation({
     mutationFn: async (isLive: boolean) => {
-      return apiRequest(`/api/user/${userId}/toggle-live`, {
+      const response = await fetch(`/api/user/${userId}/toggle-live`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isLive }),
       });
+      if (!response.ok) throw new Error("Failed to toggle live mode");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
@@ -66,10 +72,13 @@ export function LiveTradingSwitch({ userId }: LiveTradingSwitchProps) {
 
   const updateCredentials = useMutation({
     mutationFn: async () => {
-      return apiRequest(`/api/user/${userId}/exchange-credentials`, {
+      const response = await fetch(`/api/user/${userId}/exchange-credentials`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
+      if (!response.ok) throw new Error("Failed to update credentials");
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });

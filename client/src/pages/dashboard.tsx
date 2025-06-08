@@ -13,6 +13,7 @@ import { RiskManagement } from "@/components/risk-management";
 import { MarketData } from "@/components/market-data";
 import { EducationalModal } from "@/components/educational-modal";
 import { ViperStrategy } from "@/components/viper-strategy";
+import { LiveTradingSwitch } from "@/components/live-trading-switch";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { 
   TriangleAlert, 
@@ -132,8 +133,10 @@ export default function Dashboard() {
   const activeViperTrades = viperTrades?.filter((t: any) => t.status === 'open')?.length || 0;
   
   // Use live balance from WebSocket for instant updates, fallback to database value
-  // Ensure we never fall back to $200 if we have real data
-  const dbBalance = parseFloat(userData?.paperBalance || "200.00");
+  // Choose correct balance based on user's live/demo mode
+  const dbBalance = userData?.isLiveMode 
+    ? parseFloat(userData?.liveBalance || "200.00")
+    : parseFloat(userData?.paperBalance || "200.00");
   const currentBalance = liveBalance || dbBalance;
   
   // Calculate total profits since starting at $200
@@ -233,6 +236,11 @@ export default function Dashboard() {
                 </button>
               </CardContent>
             </Card>
+
+            {/* Live Trading Switch */}
+            <div className="flex justify-center">
+              <LiveTradingSwitch userId={1} />
+            </div>
 
             {/* Portfolio Overview */}
             <Card className="bg-gray-800 border-gray-700">
