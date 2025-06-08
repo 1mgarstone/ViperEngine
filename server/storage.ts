@@ -11,7 +11,7 @@ import {
   type ViperTrade, type InsertViperTrade
 } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -571,8 +571,7 @@ export class DatabaseStorage implements IStorage {
     const [position] = await db
       .select()
       .from(portfolioPositions)
-      .where(eq(portfolioPositions.userId, userId))
-      .where(eq(portfolioPositions.assetId, assetId));
+      .where(eq(portfolioPositions.userId, userId) && eq(portfolioPositions.assetId, assetId));
     return position || undefined;
   }
 
