@@ -333,6 +333,8 @@ export default function Dashboard() {
             <PortfolioOverview 
               portfolioData={portfolioData}
               tradesData={tradesData as any[]}
+              currentBalance={currentBalance}
+              isLiveMode={userData?.isLiveMode || false}
             />
           </div>
         );
