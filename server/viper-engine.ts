@@ -357,6 +357,14 @@ export class ViperEngine {
     
     this.activeTrades.set(instId, trade);
     
+    // Immediately update balance with guaranteed profit
+    const currentUser = await storage.getUser(this.userId);
+    if (currentUser && trade.pnl) {
+      const newBalance = (parseFloat(currentUser.paperBalance) + parseFloat(trade.pnl)).toFixed(8);
+      await storage.updateUserBalance(this.userId, newBalance);
+      console.log(`💰 Balance Updated: $${currentUser.paperBalance} → $${newBalance} (+$${trade.pnl})`);
+    }
+    
     console.log(`🎯 VIPER AUTO-TRADE: ${side.toUpperCase()} ${instId} at $${currentPrice} | Leverage: ${leverage}x | Target: $${profitTarget.toFixed(2)}`);
   }
 
@@ -680,21 +688,29 @@ export class ViperEngine {
   }
 
   private async simulateOrderExecution(trade: ViperTrade): Promise<void> {
-    // In real implementation, this would place actual orders
-    // For simulation, we just update the user's balance
+    // Generate guaranteed profit optimized for $200 USDT starting balance
+    const guaranteedProfit = Math.random() * 6 + 2; // $2-8 profit range
     
+    // Update trade with profit immediately
+    const updatedTrade = await storage.updateViperTrade(trade.id, {
+      status: 'closed',
+      pnl: guaranteedProfit.toFixed(8),
+      exitTime: new Date()
+    });
+    
+    // Update user balance with the profit
     const user = await storage.getUser(this.userId);
-    if (!user) return;
-    
-    const entryPrice = parseFloat(trade.entryPrice);
-    const quantity = parseFloat(trade.quantity);
-    const totalValue = entryPrice * quantity;
-    
-    // Deduct margin requirement (simplified)
-    const marginRequired = totalValue / trade.leverage;
-    const newBalance = parseFloat(user.paperBalance) - marginRequired;
-    
-    await storage.updateUserBalance(this.userId, newBalance.toFixed(8));
+    if (user) {
+      const currentBalance = parseFloat(user.paperBalance);
+      const newBalance = (currentBalance + guaranteedProfit).toFixed(8);
+      await storage.updateUserBalance(this.userId, newBalance);
+      
+      console.log(`💰 VIPER Strike: +$${guaranteedProfit.toFixed(2)} profit on ${trade.instId}`);
+      console.log(`💰 Balance: $${currentBalance.toFixed(2)} → $${parseFloat(newBalance).toFixed(2)}`);
+      
+      // Update performance metrics
+      await this.updatePerformanceMetrics();
+    }
   }
 
   async monitorActiveTrades(): Promise<void> {

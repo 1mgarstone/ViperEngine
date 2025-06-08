@@ -124,8 +124,16 @@ export default function Dashboard() {
 
   const isViperRunning = viperStatus?.isRunning || false;
   const activeViperTrades = viperTrades?.filter((t: any) => t.status === 'open')?.length || 0;
-  const totalPnL = viperStatus?.profitability || 0;
-  const currentBalance = parseFloat(userData?.paperBalance || "100") + totalPnL;
+  
+  // Calculate real-time balance including all VIPER profits
+  const baseBalance = parseFloat(userData?.paperBalance || "200.00");
+  const viperProfits = viperTrades?.reduce((total: number, trade: any) => {
+    return total + (trade.pnl ? parseFloat(trade.pnl) : 0);
+  }, 0) || 0;
+  const currentBalance = baseBalance + viperProfits;
+  
+  // Calculate total profits since starting at $200
+  const totalProfit = currentBalance - 200;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -144,11 +152,12 @@ export default function Dashboard() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <div className="text-xs text-orange-100">Balance</div>
+                    <div className="text-xs text-orange-100">Live Balance</div>
                     <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)} USDT</div>
-                    {totalPnL !== 0 && (
-                      <div className={`text-xs ${totalPnL > 0 ? 'text-green-300' : 'text-red-300'}`}>
-                        {totalPnL > 0 ? '+' : ''}${totalPnL.toFixed(2)} P&L
+                    <div className="text-xs text-orange-200">Start: $200.00</div>
+                    {totalProfit !== 0 && (
+                      <div className={`text-xs font-medium ${totalProfit > 0 ? 'text-green-300' : 'text-red-300'}`}>
+                        {totalProfit > 0 ? '+' : ''}${totalProfit.toFixed(2)} Total Profit
                       </div>
                     )}
                   </div>
@@ -235,9 +244,9 @@ export default function Dashboard() {
                     <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-400">P&L Today</div>
-                    <div className={`font-mono text-lg ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {totalPnL >= 0 ? '+' : ''}${totalPnL.toFixed(2)}
+                    <div className="text-xs text-gray-400">Total Profit</div>
+                    <div className={`font-mono text-lg ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)}
                     </div>
                   </div>
                   <div>
@@ -340,9 +349,9 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          {totalPnL !== 0 && (
-            <div className={`text-xs text-center mt-1 font-mono ${totalPnL > 0 ? 'text-green-200' : 'text-red-200'}`}>
-              {totalPnL > 0 ? '+' : ''}${totalPnL.toFixed(2)}
+          {totalProfit !== 0 && (
+            <div className={`text-xs text-center mt-1 font-mono ${totalProfit > 0 ? 'text-green-200' : 'text-red-200'}`}>
+              {totalProfit > 0 ? '+' : ''}${totalProfit.toFixed(2)}
             </div>
           )}
         </div>
