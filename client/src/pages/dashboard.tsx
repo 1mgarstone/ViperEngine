@@ -316,7 +316,33 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white relative">
+      {/* VIPER Status Floating Indicator */}
+      <div className="fixed top-4 right-4 z-50">
+        <div className={`px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${
+          isViperRunning 
+            ? 'bg-green-600/90 border-green-500 animate-pulse' 
+            : 'bg-gray-700/90 border-gray-600'
+        }`}>
+          <div className="flex items-center space-x-2">
+            <Zap className="h-4 w-4 text-white" />
+            <span className="text-white text-xs font-medium">
+              {isViperRunning ? 'ACTIVE' : 'STANDBY'}
+            </span>
+            {isViperRunning && (
+              <div className="text-xs text-green-200">
+                {viperStatus?.cycleCount || 0}
+              </div>
+            )}
+          </div>
+          {totalPnL !== 0 && (
+            <div className={`text-xs text-center mt-1 font-mono ${totalPnL > 0 ? 'text-green-200' : 'text-red-200'}`}>
+              {totalPnL > 0 ? '+' : ''}${totalPnL.toFixed(2)}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Mobile Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 sticky top-0 z-50">
         <div className="flex items-center justify-between">
@@ -354,22 +380,30 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main Content with Swipe Gestures */}
+      {/* Main Content with Fixed Scrolling */}
       <main 
         ref={containerRef}
-        className="px-4 py-4 mobile-scroll overflow-y-auto touch-pan-y"
+        className="px-4 py-4 mobile-scroll"
         style={{
           height: 'calc(100vh - 140px)',
-          transform: isDragging ? `translateX(${Math.max(-50, Math.min(50, dragOffset * 0.3))}px)` : 'translateX(0)',
-          transition: isDragging ? 'none' : 'transform 0.3s ease-out',
-          overflowY: 'scroll',
-          WebkitOverflowScrolling: 'touch'
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          position: 'relative'
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
-        {renderTabContent()}
+        <div 
+          style={{
+            transform: isDragging ? `translateX(${Math.max(-50, Math.min(50, dragOffset * 0.3))}px)` : 'translateX(0)',
+            transition: isDragging ? 'none' : 'transform 0.3s ease-out'
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {renderTabContent()}
+        </div>
       </main>
 
       {/* Quick Actions Floating Button */}
