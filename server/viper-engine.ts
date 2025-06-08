@@ -855,15 +855,15 @@ export class ViperEngine {
       pnl: Math.abs(finalPnL).toFixed(8), // Always positive
     });
     
-    // Update user balance - guaranteed increase only
+    // Update user balance - guaranteed increase only (preserve accumulated profits)
     const user = await storage.getUser(this.userId);
     if (user) {
       const currentBalance = parseFloat(user.paperBalance);
-      const marginReleased = (entryPrice * quantity) / trade.leverage;
-      const balanceIncrease = marginReleased + Math.abs(finalPnL);
-      const newBalance = currentBalance + balanceIncrease;
+      // Only add the actual profit, don't modify margin calculations
+      const newBalance = currentBalance + Math.abs(finalPnL);
       
       await storage.updateUserBalance(this.userId, newBalance.toFixed(8));
+      console.log(`💰 Balance Update: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)} (+$${Math.abs(finalPnL).toFixed(2)})`);
     }
     
     // Remove from active trades

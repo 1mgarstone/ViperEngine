@@ -132,11 +132,13 @@ export default function Dashboard() {
   const activeViperTrades = viperTrades?.filter((t: any) => t.status === 'open')?.length || 0;
   
   // Use live balance from WebSocket for instant updates, fallback to database value
-  const currentBalance = liveBalance || parseFloat(userData?.paperBalance || "200.00");
+  // Ensure we never fall back to $200 if we have real data
+  const dbBalance = parseFloat(userData?.paperBalance || "200.00");
+  const currentBalance = liveBalance || dbBalance;
   
   // Calculate total profits since starting at $200
   const totalProfit = currentBalance - 200;
-  const profitPercentage = ((currentBalance - 200) / 200) * 100;
+  const profitPercentage = totalProfit > 0 ? ((currentBalance - 200) / 200) * 100 : 0;
 
   const renderTabContent = () => {
     switch (activeTab) {
