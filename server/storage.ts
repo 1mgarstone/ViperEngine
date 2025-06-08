@@ -949,19 +949,28 @@ export class DatabaseStorage implements IStorage {
     apiPassphrase?: string;
     exchangeName: string;
   }): Promise<User> {
-    const [updated] = await db
-      .update(users)
-      .set({
-        apiKey: credentials.apiKey,
-        apiSecret: credentials.apiSecret,
-        apiPassphrase: credentials.apiPassphrase || null,
-        exchangeName: credentials.exchangeName,
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    
-    if (!updated) throw new Error("User not found");
-    return updated;
+    try {
+      console.log(`DatabaseStorage: Updating credentials for user ${userId}`);
+      
+      const [updated] = await db
+        .update(users)
+        .set({
+          apiKey: credentials.apiKey,
+          apiSecret: credentials.apiSecret,
+          apiPassphrase: credentials.apiPassphrase || null,
+          exchangeName: credentials.exchangeName,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      console.log(`DatabaseStorage: Update result:`, updated ? 'Success' : 'No user found');
+      
+      if (!updated) throw new Error("User not found");
+      return updated;
+    } catch (error) {
+      console.error(`DatabaseStorage: Error updating credentials:`, error);
+      throw error;
+    }
   }
 
   async getCurrentBalance(userId: number): Promise<string> {

@@ -525,11 +525,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.userId);
       const { apiKey, apiSecret, apiPassphrase, exchangeName } = req.body;
       
+      console.log(`Updating exchange credentials for user ${userId}, exchange: ${exchangeName}`);
+      
       // Basic validation
       if (!apiKey || !apiSecret || !exchangeName) {
+        console.log("Validation failed: missing required fields");
         return res.status(400).json({ message: "API key, secret, and exchange name are required" });
       }
 
+      console.log("Calling storage.updateExchangeCredentials...");
       const user = await storage.updateExchangeCredentials(userId, {
         apiKey,
         apiSecret,
@@ -537,11 +541,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exchangeName,
       });
       
+      console.log("Exchange credentials updated successfully");
       // Don't return sensitive credentials in response
       const { apiKey: _, apiSecret: __, apiPassphrase: ___, ...safeUser } = user;
       res.json(safeUser);
     } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      console.error("Error updating exchange credentials:", error);
+      res.status(500).json({ message: "Internal server error", error: String(error) });
     }
   });
 

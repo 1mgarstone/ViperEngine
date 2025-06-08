@@ -72,13 +72,23 @@ export function LiveTradingSwitch({ userId }: LiveTradingSwitchProps) {
 
   const updateCredentials = useMutation({
     mutationFn: async () => {
-      const response = await fetch(`/api/user/${userId}/exchange-credentials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials),
-      });
-      if (!response.ok) throw new Error("Failed to update credentials");
-      return response.json();
+      try {
+        const response = await fetch(`/api/user/${userId}/exchange-credentials`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to update credentials");
+        }
+        
+        return response.json();
+      } catch (error) {
+        console.error("Credentials update error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
@@ -89,10 +99,11 @@ export function LiveTradingSwitch({ userId }: LiveTradingSwitchProps) {
         description: "Exchange API credentials have been securely saved",
       });
     },
-    onError: () => {
+    onError: (error: Error) => {
+      console.error("Mutation error:", error);
       toast({
         title: "Error",
-        description: "Failed to update exchange credentials",
+        description: error.message || "Failed to update exchange credentials",
         variant: "destructive",
       });
     },
