@@ -97,11 +97,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Auto-correct balance if it shows 100k instead of 100 USDT
+      // Auto-correct balance if it shows 100k instead of 200 USDT
       if (parseFloat(user.paperBalance) > 1000) {
-        user = await storage.updateUserBalance(userId, "100.00000000");
+        user = await storage.updateUserBalance(userId, "200.00000000");
       }
       
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/user/:id/balance", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { balance } = req.body;
+      
+      const user = await storage.updateUserBalance(userId, balance);
       res.json(user);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
