@@ -957,17 +957,22 @@ export class ViperEngine {
       
       const currentBalance = await this.getCurrentBalance();
       
-      // Execute intelligent micro-profit strategy with promise isolation
-      this.executeIntelligentMicroProfit(currentBalance).catch(error => {
-        console.error('Micro-profit execution isolated error:', error);
-      });
+      // Only execute micro-profit strategy if enabled
+      if (this.microTradeEnabled) {
+        // Execute intelligent micro-profit strategy with promise isolation
+        this.executeIntelligentMicroProfit(currentBalance).catch(error => {
+          console.error('Micro-profit execution isolated error:', error);
+        });
+      }
       
-      // Original micro-profit for display consistency
-      const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
-      const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
-      const microLeverage = Math.floor(Math.random() * 30) + 20;
-      
-      console.log(`⚡ Micro-Profit: +$0.50 on ${selectedAsset} (${microLeverage}x)`);
+      // Original micro-profit for display consistency (only if micro-trade enabled)
+      if (this.microTradeEnabled) {
+        const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
+        const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
+        const microLeverage = Math.floor(Math.random() * 30) + 20;
+        
+        console.log(`⚡ Micro-Profit: +$0.50 on ${selectedAsset} (${microLeverage}x)`);
+      }
     } catch (error) {
       console.error('High-frequency profit execution error:', error);
     }
@@ -1006,69 +1011,72 @@ export class ViperEngine {
     riskLevel: number;
     selectivityThreshold: number;
   } {
+    // Apply intensity scaling to base configurations
+    const intensityMultiplier = this.microTradeIntensity / 3; // Normalize to 3 as baseline
+    
     // Strategic micro-trading tiers starting from $10.00
     if (balance < 15) {
       return {
-        baseProfit: 0.03,      // $0.03 base - ultra conservative start
-        burstSize: 1,          // 1 trade per burst
-        scalingFactor: 1.05,   // 5% scaling - minimal growth
-        compoundingRate: 0.005, // 0.5% compounding
-        riskLevel: 0.01,       // 1% risk - ultra safe
-        selectivityThreshold: 0.95 // 95% confidence required
+        baseProfit: 0.03 * intensityMultiplier,      // Scale with intensity
+        burstSize: Math.max(1, Math.floor(1 * intensityMultiplier)),
+        scalingFactor: 1.05 + (intensityMultiplier - 1) * 0.02,
+        compoundingRate: 0.005 * intensityMultiplier,
+        riskLevel: 0.01 * intensityMultiplier,
+        selectivityThreshold: 0.95 - (intensityMultiplier - 1) * 0.05 // Lower threshold for higher intensity
       };
     } else if (balance < 25) {
       return {
-        baseProfit: 0.05,      // $0.05 base
-        burstSize: 1,          // 1 trade per burst
-        scalingFactor: 1.08,   // 8% scaling
-        compoundingRate: 0.01, // 1% compounding
-        riskLevel: 0.02,       // 2% risk
-        selectivityThreshold: 0.92 // 92% confidence required
+        baseProfit: 0.05 * intensityMultiplier,
+        burstSize: Math.max(1, Math.floor(1 * intensityMultiplier)),
+        scalingFactor: 1.08 + (intensityMultiplier - 1) * 0.03,
+        compoundingRate: 0.01 * intensityMultiplier,
+        riskLevel: 0.02 * intensityMultiplier,
+        selectivityThreshold: 0.92 - (intensityMultiplier - 1) * 0.05
       };
     } else if (balance < 50) {
       return {
-        baseProfit: 0.08,      // $0.08 base
-        burstSize: 1,          // 1 trade per burst
-        scalingFactor: 1.12,   // 12% scaling
-        compoundingRate: 0.015, // 1.5% compounding
-        riskLevel: 0.03,       // 3% risk
-        selectivityThreshold: 0.88 // 88% confidence required
+        baseProfit: 0.08 * intensityMultiplier,
+        burstSize: Math.max(1, Math.floor(1 * intensityMultiplier)),
+        scalingFactor: 1.12 + (intensityMultiplier - 1) * 0.04,
+        compoundingRate: 0.015 * intensityMultiplier,
+        riskLevel: 0.03 * intensityMultiplier,
+        selectivityThreshold: 0.88 - (intensityMultiplier - 1) * 0.05
       };
     } else if (balance < 100) {
       return {
-        baseProfit: 0.12,      // $0.12 base
-        burstSize: 2,          // 2 trades per burst
-        scalingFactor: 1.18,   // 18% scaling
-        compoundingRate: 0.02, // 2% compounding
-        riskLevel: 0.04,       // 4% risk
-        selectivityThreshold: 0.85 // 85% confidence required
+        baseProfit: 0.12 * intensityMultiplier,
+        burstSize: Math.max(1, Math.floor(2 * intensityMultiplier)),
+        scalingFactor: 1.18 + (intensityMultiplier - 1) * 0.05,
+        compoundingRate: 0.02 * intensityMultiplier,
+        riskLevel: 0.04 * intensityMultiplier,
+        selectivityThreshold: 0.85 - (intensityMultiplier - 1) * 0.05
       };
     } else if (balance < 250) {
       return {
-        baseProfit: 0.20,      // $0.20 base
-        burstSize: 2,          // 2 trades per burst
-        scalingFactor: 1.25,   // 25% scaling
-        compoundingRate: 0.025, // 2.5% compounding
-        riskLevel: 0.05,       // 5% risk
-        selectivityThreshold: 0.82 // 82% confidence required
+        baseProfit: 0.20 * intensityMultiplier,
+        burstSize: Math.max(1, Math.floor(2 * intensityMultiplier)),
+        scalingFactor: 1.25 + (intensityMultiplier - 1) * 0.06,
+        compoundingRate: 0.025 * intensityMultiplier,
+        riskLevel: 0.05 * intensityMultiplier,
+        selectivityThreshold: 0.82 - (intensityMultiplier - 1) * 0.05
       };
     } else if (balance < 500) {
       return {
-        baseProfit: 0.35,      // $0.35 base
-        burstSize: 3,          // 3 trades per burst
-        scalingFactor: 1.35,   // 35% scaling
-        compoundingRate: 0.035, // 3.5% compounding
-        riskLevel: 0.06,       // 6% risk
-        selectivityThreshold: 0.80 // 80% confidence required
+        baseProfit: 0.35 * intensityMultiplier,
+        burstSize: Math.max(1, Math.floor(3 * intensityMultiplier)),
+        scalingFactor: 1.35 + (intensityMultiplier - 1) * 0.08,
+        compoundingRate: 0.035 * intensityMultiplier,
+        riskLevel: 0.06 * intensityMultiplier,
+        selectivityThreshold: 0.80 - (intensityMultiplier - 1) * 0.05
       };
     } else {
       return {
-        baseProfit: 0.50,      // $0.50 base
-        burstSize: 3,          // 3 trades per burst
-        scalingFactor: 1.50,   // 50% scaling
-        compoundingRate: 0.05, // 5% compounding
-        riskLevel: 0.08,       // 8% risk
-        selectivityThreshold: 0.75 // 75% confidence required
+        baseProfit: 0.50 * intensityMultiplier,
+        burstSize: Math.max(1, Math.floor(3 * intensityMultiplier)),
+        scalingFactor: 1.50 + (intensityMultiplier - 1) * 0.10,
+        compoundingRate: 0.05 * intensityMultiplier,
+        riskLevel: 0.08 * intensityMultiplier,
+        selectivityThreshold: 0.75 - (intensityMultiplier - 1) * 0.05
       };
     }
   }

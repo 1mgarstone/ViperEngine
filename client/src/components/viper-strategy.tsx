@@ -83,17 +83,31 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     refetchInterval: 1000,
   });
 
+  // Fetch micro-trade status
+  const { data: microTradeStatus } = useQuery({
+    queryKey: ["/api/micro-trade/status"],
+    refetchInterval: 2000,
+  });
+
   // Update form when settings data loads
   useEffect(() => {
     if (settingsData) {
-      setIsEnabled(settingsData.isEnabled);
-      setMaxLeverage([settingsData.maxLeverage]);
-      setProfitTarget(settingsData.profitTarget);
-      setStopLoss(settingsData.stopLoss);
-      setMaxTrades([settingsData.maxConcurrentTrades]);
-      setBalanceMultiplier(settingsData.balanceMultiplier);
+      setIsEnabled(settingsData.isEnabled || false);
+      setMaxLeverage([settingsData.maxLeverage || 125]);
+      setProfitTarget(settingsData.profitTarget || "3.50");
+      setStopLoss(settingsData.stopLoss || "0.80");
+      setMaxTrades([settingsData.maxConcurrentTrades || 5]);
+      setBalanceMultiplier(settingsData.balanceMultiplier || "3.00");
     }
   }, [settingsData]);
+
+  // Update micro-trade form when status loads
+  useEffect(() => {
+    if (microTradeStatus) {
+      setIsMicroTradeEnabled(microTradeStatus.enabled);
+      setMicroTradeIntensity([microTradeStatus.intensity || 3]);
+    }
+  }, [microTradeStatus]);
 
   // Update settings mutation
   const updateSettingsMutation = useMutation({
@@ -127,6 +141,32 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
       toast({
         title: "Save Failed",
         description: "Failed to save VIPER settings. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Micro-trade strategy toggle mutation
+  const toggleMicroTradeMutation = useMutation({
+    mutationFn: async ({ enabled, intensity }: { enabled: boolean; intensity: number }) => {
+      const response = await fetch("/api/micro-trade/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, intensity }),
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Micro-Trade Strategy Updated",
+        description: data.message || "Settings saved successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/micro-trade/status"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update micro-trade settings. Please try again.",
         variant: "destructive",
       });
     },
@@ -262,7 +302,14 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
                 <input
                   type="checkbox"
                   checked={isMicroTradeEnabled}
-                  onChange={(e) => setIsMicroTradeEnabled(e.target.checked)}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setIsMicroTradeEnabled(enabled);
+                    toggleMicroTradeMutation.mutate({ 
+                      enabled, 
+                      intensity: microTradeIntensity[0] 
+                    });
+                  }}
                   className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
                 />
               </div>
@@ -274,7 +321,15 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
                   <Label className="text-white mb-2 block">Trading Intensity: {microTradeIntensity[0]}</Label>
                   <Slider
                     value={microTradeIntensity}
-                    onValueChange={setMicroTradeIntensity}
+                    onValueChange={(value) => {
+                      setMicroTradeIntensity(value);
+                      if (isMicroTradeEnabled) {
+                        toggleMicroTradeMutation.mutate({ 
+                          enabled: true, 
+                          intensity: value[0] 
+                        });
+                      }
+                    }}
                     max={5}
                     min={1}
                     step={1}
