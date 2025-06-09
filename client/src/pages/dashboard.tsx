@@ -237,10 +237,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Live Trading Switch */}
-            <div className="flex justify-center">
-              <LiveTradingSwitch userId={1} />
-            </div>
+
 
             {/* Portfolio Overview */}
             <Card className="bg-gray-800 border-gray-700">

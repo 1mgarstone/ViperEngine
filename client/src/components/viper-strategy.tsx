@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { LiveTradingSwitch } from "@/components/live-trading-switch";
 
 interface ViperStrategyProps {
   userId: number;
@@ -228,15 +229,19 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
         </CardContent>
       </Card>
 
-      {/* Strategy Configuration */}
+      {/* Trading Environment & Strategy Configuration */}
       <Card className="bg-gray-800 border-gray-700">
         <CardHeader>
           <CardTitle className="text-white flex items-center space-x-2">
             <Target className="h-5 w-5 text-blue-400" />
-            <span>Strategy Settings</span>
+            <span>Trading Environment & Strategy Settings</span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Trading Mode Control */}
+          <div className="mb-6">
+            <LiveTradingSwitch userId={userId} />
+          </div>
           {/* Leverage Control */}
           <div>
             <Label className="text-white mb-2 block">Maximum Leverage: {maxLeverage[0]}x</Label>
