@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,14 @@ import {
   DollarSign,
   Activity,
   Clock,
-  ArrowLeftRight
+  ArrowLeftRight,
+  RotateCcw
 } from "lucide-react";
 
 export default function Dashboard() {
   const [showEducationalModal, setShowEducationalModal] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const queryClient = useQueryClient();
   
   // Collapsible sections state
   const [portfolioExpanded, setPortfolioExpanded] = useState(true);
@@ -134,13 +136,13 @@ export default function Dashboard() {
   // Use live balance from WebSocket for instant updates, fallback to database value
   // Choose correct balance based on user's live/demo mode
   const dbBalance = userData?.isLiveMode 
-    ? parseFloat(userData?.liveBalance || "200.00")
-    : parseFloat(userData?.paperBalance || "200.00");
+    ? parseFloat(userData?.liveBalance || "10.00")
+    : parseFloat(userData?.paperBalance || "10.00");
   const currentBalance = liveBalance || dbBalance;
   
-  // Calculate total profits since starting at $200
-  const totalProfit = currentBalance - 200;
-  const profitPercentage = totalProfit > 0 ? ((currentBalance - 200) / 200) * 100 : 0;
+  // Calculate total profits since starting at $10.00
+  const totalProfit = currentBalance - 10;
+  const profitPercentage = totalProfit > 0 ? ((currentBalance - 10) / 10) * 100 : 0;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -161,7 +163,7 @@ export default function Dashboard() {
                   <div>
                     <div className="text-xs text-orange-100">Live Balance</div>
                     <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)} USDT</div>
-                    <div className="text-xs text-orange-200">Start: $200.00</div>
+                    <div className="text-xs text-orange-200">Start: $10.00</div>
                     {totalProfit !== 0 && (
                       <div className={`text-xs font-medium ${totalProfit > 0 ? 'text-green-300' : 'text-red-300'}`}>
                         {totalProfit > 0 ? '+' : ''}${totalProfit.toFixed(2)} Total Profit

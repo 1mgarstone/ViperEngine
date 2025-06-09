@@ -65,11 +65,9 @@ export class ViperEngine {
 
       const currentBalance = parseFloat(user.paperBalance);
       
-      // Reset demo balance to $10.00 if starting fresh
-      if (currentBalance === 0 || currentBalance > 1000) {
-        await storage.updateUserBalance(this.userId, "10.00");
-        console.log("🔄 Demo Reset: Starting systematic trading progression from $10.00 USDT");
-      }
+      // Always start fresh with $10.00 USDT for systematic progression
+      await storage.updateUserBalance(this.userId, "10.00");
+      console.log("🔄 Demo Reset: Starting systematic trading progression from $10.00 USDT");
 
       // Configure initial state: Micro-trading only
       this.microTradeEnabled = true;
