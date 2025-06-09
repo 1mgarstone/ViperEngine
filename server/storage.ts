@@ -845,21 +845,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
-    const existing = await this.getViperSettings(insertSettings.userId);
-    
-    if (existing) {
-      const [updated] = await db
-        .update(viperSettings)
-        .set({ ...insertSettings, updatedAt: new Date() })
-        .where(eq(viperSettings.userId, insertSettings.userId))
-        .returning();
-      return updated;
-    } else {
-      const [newSettings] = await db
-        .insert(viperSettings)
-        .values(insertSettings)
-        .returning();
-      return newSettings;
+    try {
+      const existing = await this.getViperSettings(insertSettings.userId);
+      
+      if (existing) {
+        const [updated] = await db
+          .update(viperSettings)
+          .set({ 
+            maxLeverage: insertSettings.maxLeverage,
+            volThreshold: insertSettings.volThreshold,
+            strikeWindow: insertSettings.strikeWindow,
+            profitTarget: insertSettings.profitTarget,
+            stopLoss: insertSettings.stopLoss,
+            clusterThreshold: insertSettings.clusterThreshold,
+            positionScaling: insertSettings.positionScaling,
+            maxConcurrentTrades: insertSettings.maxConcurrentTrades,
+            balanceMultiplier: insertSettings.balanceMultiplier,
+            isEnabled: insertSettings.isEnabled,
+            updatedAt: new Date()
+          })
+          .where(eq(viperSettings.userId, insertSettings.userId))
+          .returning();
+        return updated;
+      } else {
+        const [newSettings] = await db
+          .insert(viperSettings)
+          .values({
+            ...insertSettings,
+            updatedAt: new Date()
+          })
+          .returning();
+        return newSettings;
+      }
+    } catch (error) {
+      console.error("Error updating VIPER settings:", error);
+      throw error;
     }
   }
 
