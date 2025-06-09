@@ -44,6 +44,10 @@ export class ViperEngine {
   private profitOptimizer: Map<string, ProfitOptimizer> = new Map();
   private marketAnalysis: Map<string, any> = new Map();
   
+  // Micro-trade strategy state
+  private microTradeEnabled: boolean = true;
+  private microTradeIntensity: number = 3;
+  
   constructor(userId: number) {
     this.userId = userId;
   }
@@ -1466,5 +1470,32 @@ export class ViperEngine {
       winRate,
       avgPnL,
     };
+  }
+
+  // Micro-trade strategy control methods
+  updateMicroTradeSettings(enabled: boolean, intensity: number): void {
+    this.microTradeEnabled = enabled;
+    this.microTradeIntensity = Math.max(1, Math.min(5, intensity));
+    
+    console.log(`🔧 Micro-Trade Strategy: ${enabled ? 'Enabled' : 'Disabled'}`);
+    if (enabled) {
+      console.log(`🎯 Trading Intensity: ${this.microTradeIntensity}/5`);
+    }
+  }
+
+  getMicroTradeStatus(): { enabled: boolean; intensity: number; activeTrades: number } {
+    return {
+      enabled: this.microTradeEnabled,
+      intensity: this.microTradeIntensity,
+      activeTrades: 0 // Micro-trades are executed instantly
+    };
+  }
+
+  isMicroTradeEnabled(): boolean {
+    return this.microTradeEnabled;
+  }
+
+  getMicroTradeIntensity(): number {
+    return this.microTradeIntensity;
   }
 }

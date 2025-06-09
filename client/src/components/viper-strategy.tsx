@@ -55,6 +55,10 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   const [stopLoss, setStopLoss] = useState("0.80");
   const [maxTrades, setMaxTrades] = useState([5]);
   const [balanceMultiplier, setBalanceMultiplier] = useState("3.00");
+  
+  // Micro-trade strategy state
+  const [isMicroTradeEnabled, setIsMicroTradeEnabled] = useState(true);
+  const [microTradeIntensity, setMicroTradeIntensity] = useState([3]); // 1-5 scale
 
   // Fetch VIPER settings
   const { data: settingsData } = useQuery({
@@ -241,6 +245,57 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
           {/* Trading Mode Control */}
           <div className="mb-6">
             <LiveTradingSwitch userId={userId} />
+          </div>
+
+          {/* Micro-Trade Strategy Control */}
+          <div className="space-y-4 p-4 bg-blue-600/10 border border-blue-500/30 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <DollarSign className="h-5 w-5 text-blue-400" />
+                <div>
+                  <h3 className="text-white font-medium">Micro-Trade Strategy</h3>
+                  <p className="text-sm text-gray-300">Intelligent micro-profit generation with strategic scaling</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <label className="text-sm text-white">Enabled</label>
+                <input
+                  type="checkbox"
+                  checked={isMicroTradeEnabled}
+                  onChange={(e) => setIsMicroTradeEnabled(e.target.checked)}
+                  className="rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            
+            {isMicroTradeEnabled && (
+              <div className="space-y-3">
+                <div>
+                  <Label className="text-white mb-2 block">Trading Intensity: {microTradeIntensity[0]}</Label>
+                  <Slider
+                    value={microTradeIntensity}
+                    onValueChange={setMicroTradeIntensity}
+                    max={5}
+                    min={1}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>Conservative</span>
+                    <span>Moderate</span>
+                    <span>Aggressive</span>
+                  </div>
+                </div>
+                
+                <Alert className="border-blue-500/30 bg-blue-500/10">
+                  <AlertDescription className="text-blue-300 text-sm">
+                    <strong>Micro-Trade Strategy:</strong> Generates small, consistent profits through intelligent 
+                    opportunity selection. Scales automatically with balance growth. Can operate independently 
+                    or alongside VIPER Strike liquidation trading.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
           </div>
           {/* Leverage Control */}
           <div>

@@ -572,5 +572,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Micro-Trade Strategy control endpoints
+  app.post("/api/micro-trade/toggle", async (req, res) => {
+    try {
+      const { enabled, intensity } = req.body;
+      const viperEngine = getViperEngine(1);
+      
+      // Update micro-trade settings
+      viperEngine.updateMicroTradeSettings(enabled, intensity || 3);
+      
+      res.json({ 
+        success: true, 
+        message: enabled ? "Micro-trade strategy enabled" : "Micro-trade strategy disabled",
+        settings: { enabled, intensity: intensity || 3 }
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update micro-trade settings" });
+    }
+  });
+
+  app.get("/api/micro-trade/status", async (req, res) => {
+    try {
+      const viperEngine = getViperEngine(1);
+      const status = viperEngine.getMicroTradeStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get micro-trade status" });
+    }
+  });
+
   return httpServer;
 }
