@@ -671,7 +671,7 @@ export class DatabaseStorage implements IStorage {
       await this.createUser({
         username: "demo_trader",
         email: "demo@tradinglab.com",
-        paperBalance: "200.00000000"
+        paperBalance: "10.00000000"
       });
     }
 

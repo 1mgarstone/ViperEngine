@@ -6,7 +6,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
-  paperBalance: decimal("paper_balance", { precision: 20, scale: 8 }).notNull().default("200.00"),
+  paperBalance: decimal("paper_balance", { precision: 20, scale: 8 }).notNull().default("10.00"),
   liveBalance: decimal("live_balance", { precision: 20, scale: 8 }).notNull().default("0"),
   isLiveMode: boolean("is_live_mode").notNull().default(false),
   apiKey: text("api_key"), // Encrypted exchange API key
