@@ -65,18 +65,24 @@ export class ViperEngine {
 
       const currentBalance = parseFloat(user.paperBalance);
       
-      // Always start fresh with $10.00 USDT for systematic progression
-      await storage.updateUserBalance(this.userId, "10.00");
-      console.log("🔄 Demo Reset: Starting systematic trading progression from $10.00 USDT");
+      // Only reset to $10.00 if balance is 0 or unreasonably high (indicating fresh start)
+      if (currentBalance === 0 || currentBalance > 10000) {
+        await storage.updateUserBalance(this.userId, "10.00");
+        console.log("🔄 Demo Reset: Starting systematic trading progression from $10.00 USDT");
+      } else {
+        console.log(`🔄 Resuming systematic trading from $${currentBalance.toFixed(2)} USDT`);
+      }
 
-      // Configure initial state: Micro-trading only
+      // Configure trading strategies based on current balance
       this.microTradeEnabled = true;
-      this.viperStrategyEnabled = false;
+      this.viperStrategyEnabled = currentBalance >= 200;
       this.systematicProgression = true;
       
-      console.log("📈 Systematic Trading Initialized:");
-      console.log("   Phase 1: Micro-trading only ($10 → $200)");
-      console.log("   Phase 2: Combined strategies ($200+)");
+      if (currentBalance < 200) {
+        console.log("📈 Phase 1: Micro-trading only ($10 → $200)");
+      } else {
+        console.log("📈 Phase 2: Combined strategies active");
+      }
     } catch (error) {
       console.error("Failed to initialize systematic trading:", error);
     }

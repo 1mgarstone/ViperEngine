@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { MarketData } from "@/components/market-data";
 import { ViperStrategy } from "@/components/viper-strategy";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -17,12 +16,9 @@ import {
   BarChart3,
   Settings,
   Home,
-  ChevronDown,
-  ChevronUp,
   DollarSign,
   Activity,
   Clock,
-  ArrowLeftRight,
   RotateCcw
 } from "lucide-react";
 
@@ -30,64 +26,18 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const queryClient = useQueryClient();
   
-  // Collapsible sections state
-  const [marketExpanded, setMarketExpanded] = useState(true);
-  
   // Swipe gesture state
   const containerRef = useRef<HTMLDivElement>(null);
   const startX = useRef<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
 
-  
-  const tabs = [
-    { id: "dashboard", label: "Overview", icon: Home, color: "blue" },
-    { id: "viper", label: "VIPER Strike", icon: Zap, color: "orange" },
-    { id: "portfolio", label: "Portfolio", icon: BarChart3, color: "purple" }
-  ];
-  
-  const currentTabIndex = tabs.findIndex(tab => tab.id === activeTab);
-  
-  // Touch handlers for swipe gestures
-  const handleTouchStart = (e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    setIsDragging(true);
-  };
-  
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const currentX = e.touches[0].clientX;
-    const diff = currentX - startX.current;
-    setDragOffset(diff);
-  };
-  
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-    
-    const threshold = 80;
-    if (Math.abs(dragOffset) > threshold) {
-      if (dragOffset > 0 && currentTabIndex > 0) {
-        // Swipe right - previous tab
-        setActiveTab(tabs[currentTabIndex - 1].id);
-      } else if (dragOffset < 0 && currentTabIndex < tabs.length - 1) {
-        // Swipe left - next tab
-        setActiveTab(tabs[currentTabIndex + 1].id);
-      }
-    }
-    
-    setIsDragging(false);
-    setDragOffset(0);
-  };
-  
-  // WebSocket connection for real-time data
-  const { marketData, isConnected, liveBalance } = useWebSocket();
-  
-  // Fetch user data with live balance updates
-  const { data: userData, refetch: refetchUserData } = useQuery({
+  // WebSocket for real-time balance updates
+  const { isConnected, liveBalance, marketData } = useWebSocket();
+
+  // Fetch user data
+  const { data: userData } = useQuery({
     queryKey: ["/api/user/1"],
-    refetchInterval: 100, // Refresh every 100ms for instant balance updates
-    staleTime: 0, // Always consider data stale for live updates
-    gcTime: 0, // No cache retention
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchOnMount: true,
@@ -219,67 +169,34 @@ export default function Dashboard() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="bg-orange-600/30 rounded p-2">
                         <div className="text-orange-200">Long Liquidations</div>
-                        <div className="text-white font-mono">
-                          {isViperRunning ? Math.floor(Math.random() * 15 + 5) : 0}
-                        </div>
+                        <div className="text-white font-mono">$4.2M</div>
                       </div>
                       <div className="bg-red-600/30 rounded p-2">
                         <div className="text-red-200">Short Liquidations</div>
-                        <div className="text-white font-mono">
-                          {isViperRunning ? Math.floor(Math.random() * 12 + 3) : 0}
-                        </div>
+                        <div className="text-white font-mono">$8.7M</div>
                       </div>
                     </div>
                   </div>
                 </div>
-                
-                <button
-                  onClick={async () => {
-                    // Auto-start VIPER when launching
-                    try {
-                      const response = await fetch('/api/viper-control/start', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mode: 'liquidation_scanner' })
-                      });
-                      if (response.ok) {
-                        setActiveTab("viper");
-                      }
-                    } catch (error) {
-                      console.error('Failed to start VIPER:', error);
-                      setActiveTab("viper");
-                    }
-                  }}
-                  className="w-full bg-white text-orange-600 font-bold py-3 rounded-lg hover:bg-orange-50 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <Zap className="h-5 w-5" />
-                  <span>Launch VIPER Liquidation Scanner</span>
-                </button>
+
+                <div className="text-xs text-orange-200 leading-relaxed">
+                  <strong>Systematic Trading Progression:</strong><br/>
+                  Phase 1: Micro-trading only ($10 → $200)<br/>
+                  Phase 2: Combined strategies ($200+)
+                </div>
               </CardContent>
             </Card>
 
-
-
-            {/* Portfolio Overview */}
+            {/* Performance Metrics */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white text-lg flex items-center space-x-2">
-                  <BarChart3 className="h-5 w-5 text-blue-400" />
-                  <span>Portfolio Performance</span>
+                  <TrendingUp className="h-5 w-5 text-green-400" />
+                  <span>Performance</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-400">Total Value</div>
-                    <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400">Total Profit</div>
-                    <div className={`font-mono text-lg ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)}
-                    </div>
-                  </div>
                   <div>
                     <div className="text-xs text-gray-400">Active Positions</div>
                     <div className="font-mono text-lg text-white">{activeViperTrades}</div>
@@ -313,28 +230,9 @@ export default function Dashboard() {
             <Alert className="border-blue-500 bg-blue-500/10 mb-20">
               <Zap className="h-4 w-4 text-blue-400" />
               <AlertDescription className="text-gray-300 text-sm">
-                <strong>Quick Start:</strong> Select a token above, then tap "VIPER Strike" to activate autonomous trading with advanced liquidation detection.
+                <strong>Systematic Trading:</strong> The platform automatically progresses from micro-trading to advanced VIPER strategies as your balance grows.
               </AlertDescription>
             </Alert>
-          </div>
-        );
-
-      case "trade":
-        return (
-          <div className="pb-20">
-            <Alert className="mb-4 border-orange-500 bg-orange-500/10">
-              <Zap className="h-4 w-4 text-orange-500" />
-              <AlertDescription className="text-orange-200">
-                Manual trading disabled. VIPER Strike handles all trades autonomously for optimal profit generation.
-              </AlertDescription>
-            </Alert>
-          </div>
-        );
-
-      case "risk":
-        return (
-          <div className="pb-20">
-            <RiskManagement userId={1} />
           </div>
         );
 
@@ -342,18 +240,6 @@ export default function Dashboard() {
         return (
           <div className="pb-20">
             <ViperStrategy userId={1} />
-          </div>
-        );
-
-      case "portfolio":
-        return (
-          <div className="pb-20">
-            <PortfolioOverview 
-              portfolioData={portfolioData}
-              tradesData={tradesData as any[]}
-              currentBalance={currentBalance}
-              isLiveMode={userData?.isLiveMode || false}
-            />
           </div>
         );
 
@@ -368,133 +254,45 @@ export default function Dashboard() {
       <div className="fixed top-4 right-4 z-50">
         <div className={`px-3 py-2 rounded-lg shadow-lg border backdrop-blur-sm ${
           isViperRunning 
-            ? 'bg-green-600/90 border-green-500 animate-pulse' 
-            : 'bg-gray-700/90 border-gray-600'
+            ? 'bg-green-600/20 border-green-500' 
+            : 'bg-gray-600/20 border-gray-500'
         }`}>
-          <div className="flex items-center space-x-2">
-            <Zap className="h-4 w-4 text-white" />
-            <span className="text-white text-xs font-medium">
-              {isViperRunning ? 'ACTIVE' : 'STANDBY'}
+          <div className="flex items-center space-x-2 text-sm">
+            <div className={`w-2 h-2 rounded-full ${
+              isViperRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'
+            }`} />
+            <span className="text-white font-medium">
+              {isViperRunning ? `${viperStatus?.cycleCount || 0} cycles` : 'STANDBY'}
             </span>
-            {isViperRunning && (
-              <div className="text-xs text-green-200">
-                {viperStatus?.cycleCount || 0}
-              </div>
-            )}
-          </div>
-          {totalProfit !== 0 && (
-            <div className={`text-xs text-center mt-1 font-mono ${totalProfit > 0 ? 'text-green-200' : 'text-red-200'}`}>
-              {totalProfit > 0 ? '+' : ''}${totalProfit.toFixed(2)}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 sticky top-0 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gradient-to-r from-orange-500 to-blue-500 rounded flex items-center justify-center">
-              <span className="text-xs font-bold text-white">TL</span>
-            </div>
-            <h1 className="text-lg font-bold">TradingLab</h1>
-            <Badge className="px-2 py-1 text-xs bg-green-600 text-white">SIM</Badge>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <div className="text-xs text-gray-400">Balance</div>
-              <div className="font-mono text-sm text-green-400">${currentBalance.toFixed(2)}</div>
-            </div>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`} />
-          </div>
-        </div>
-      </header>
-
-      {/* Swipe Indicator */}
-      <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="flex items-center space-x-2 bg-gray-800/80 backdrop-blur-sm px-3 py-1 rounded-full">
-          <div className="flex space-x-1">
-            {tabs.map((tab, index) => (
-              <div 
-                key={tab.id}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === currentTabIndex ? 'bg-white w-4' : 'bg-gray-500'
-                }`}
-              />
-            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Content with Fixed Scrolling */}
-      <main 
-        ref={containerRef}
-        className="px-4 py-4 mobile-scroll"
-        style={{
-          height: 'calc(100vh - 140px)',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          WebkitOverflowScrolling: 'touch',
-          touchAction: 'pan-y',
-          position: 'relative'
-        }}
-      >
-        <div 
-          style={{
-            transform: isDragging ? `translateX(${Math.max(-50, Math.min(50, dragOffset * 0.3))}px)` : 'translateX(0)',
-            transition: isDragging ? 'none' : 'transform 0.3s ease-out'
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          {renderTabContent()}
-        </div>
-      </main>
+      {/* Content */}
+      <div className="container mx-auto px-4 py-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-800 border-gray-700">
+            <TabsTrigger 
+              value="dashboard" 
+              className="flex items-center space-x-2 data-[state=active]:bg-blue-600"
+            >
+              <Home className="h-4 w-4" />
+              <span>Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="viper" 
+              className="flex items-center space-x-2 data-[state=active]:bg-orange-600"
+            >
+              <Zap className="h-4 w-4" />
+              <span>VIPER Strategy</span>
+            </TabsTrigger>
+          </TabsList>
 
-
-
-      {/* Enhanced Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-gray-800/95 backdrop-blur-sm border-t border-gray-700 px-2 py-2 z-50">
-        <div className="flex items-center justify-around">
-          {tabs.map((tab) => {
-            const IconComponent = tab.icon;
-            const isActive = activeTab === tab.id;
-            const colorMap = {
-              blue: "bg-blue-600",
-              green: "bg-green-600", 
-              purple: "bg-purple-600",
-              yellow: "bg-yellow-600",
-              orange: "bg-orange-600"
-            };
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center space-y-1 p-3 rounded-xl transition-all duration-200 min-w-[60px] btn-bounce touch-target nav-transition ${
-                  isActive 
-                    ? `${colorMap[tab.color as keyof typeof colorMap]} text-white shadow-lg scale-105` 
-                    : "text-gray-400 hover:text-white hover:bg-gray-700"
-                }`}
-              >
-                <IconComponent className={`h-5 w-5 ${isActive ? 'animate-pulse' : ''}`} />
-                <span className="text-xs font-medium">{tab.label}</span>
-                {isActive && (
-                  <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      {/* Educational Modal */}
-      <EducationalModal 
-        isOpen={showEducationalModal}
-        onClose={() => setShowEducationalModal(false)}
-      />
+          <TabsContent value={activeTab} className="mt-6">
+            {renderTabContent()}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
