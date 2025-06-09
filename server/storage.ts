@@ -134,6 +134,7 @@ export class MemStorage implements IStorage {
         apiPassphrase: null,
         exchangeName: null,
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
       this.users.set(1, defaultUser);
       this.currentUserId = 2;
@@ -231,6 +232,7 @@ export class MemStorage implements IStorage {
       apiPassphrase: null,
       exchangeName: null,
       createdAt: new Date(),
+      updatedAt: new Date(),
     };
     this.users.set(id, user);
     return user;
@@ -658,25 +660,42 @@ export class MemStorage implements IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+  private initialized = false;
+
+  private async initializeDefaultData() {
+    if (this.initialized) return;
     
-    // If user doesn't exist, create with current accumulated balance from database
-    if (!user && id === 1) {
-      // Check if there's already an accumulated balance in the database
-      const existingUsers = await db.select().from(users);
-      let initialBalance = "200.00000000";
-      
-      if (existingUsers.length === 0) {
-        const defaultUser = await this.createUser({
-          username: "demo_trader",
-          email: "demo@tradinglab.com",
-          paperBalance: initialBalance
-        });
-        return defaultUser;
+    // Initialize default user if none exists
+    const existingUsers = await db.select().from(users);
+    if (existingUsers.length === 0) {
+      await this.createUser({
+        username: "demo_trader",
+        email: "demo@tradinglab.com",
+        paperBalance: "200.00000000"
+      });
+    }
+
+    // Initialize default assets if none exist
+    const existingAssets = await db.select().from(assets);
+    if (existingAssets.length === 0) {
+      const defaultAssets = [
+        { symbol: "BTC", name: "Bitcoin", currentPrice: "45000.00000000", change24h: "2.5", volume24h: "1000000000.00000000" },
+        { symbol: "ETH", name: "Ethereum", currentPrice: "2800.00000000", change24h: "1.8", volume24h: "500000000.00000000" },
+        { symbol: "SOL", name: "Solana", currentPrice: "110.00000000", change24h: "3.2", volume24h: "200000000.00000000" },
+        { symbol: "ADA", name: "Cardano", currentPrice: "0.55000000", change24h: "-0.5", volume24h: "150000000.00000000" },
+      ];
+
+      for (const asset of defaultAssets) {
+        await db.insert(assets).values(asset);
       }
     }
-    
+
+    this.initialized = true;
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    await this.initializeDefaultData();
+    const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
@@ -996,4 +1015,5 @@ export class DatabaseStorage implements IStorage {
 }
 
 // Use DatabaseStorage for permanent persistence across restarts
+// Switch to database storage for persistent balance tracking
 export const storage = new DatabaseStorage();
