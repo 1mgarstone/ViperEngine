@@ -28,7 +28,6 @@ import {
   DollarSign,
   Activity,
   Clock,
-  Plus,
   ArrowLeftRight
 } from "lucide-react";
 
@@ -47,7 +46,7 @@ export default function Dashboard() {
   const startX = useRef<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
-  const [showQuickActions, setShowQuickActions] = useState(false);
+
   
   const tabs = [
     { id: "dashboard", label: "Overview", icon: Home, color: "blue" },
@@ -432,73 +431,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Quick Actions Floating Button */}
-      <div className="fixed bottom-20 right-4 z-40">
-        <div className="relative">
-          {/* Quick Actions Menu */}
-          {showQuickActions && (
-            <div className="absolute bottom-16 right-0 bg-gray-800/95 backdrop-blur-sm rounded-2xl p-4 shadow-2xl border border-gray-700 min-w-[200px]">
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setActiveTab("trade");
-                    setShowQuickActions(false);
-                  }}
-                  className="flex items-center space-x-3 w-full p-3 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors btn-bounce"
-                >
-                  <TrendingUp className="h-5 w-5" />
-                  <span className="font-medium">Quick Trade</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setActiveTab("viper");
-                    setShowQuickActions(false);
-                  }}
-                  className="flex items-center space-x-3 w-full p-3 rounded-xl bg-orange-600 text-white hover:bg-orange-700 transition-colors btn-bounce"
-                >
-                  <Zap className="h-5 w-5" />
-                  <span className="font-medium">VIPER Strike</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setActiveTab("portfolio");
-                    setShowQuickActions(false);
-                  }}
-                  className="flex items-center space-x-3 w-full p-3 rounded-xl bg-purple-600 text-white hover:bg-purple-700 transition-colors btn-bounce"
-                >
-                  <BarChart3 className="h-5 w-5" />
-                  <span className="font-medium">Portfolio</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setChartExpanded(!chartExpanded);
-                    setShowQuickActions(false);
-                  }}
-                  className="flex items-center space-x-3 w-full p-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors btn-bounce"
-                >
-                  <ArrowLeftRight className="h-5 w-5" />
-                  <span className="font-medium">Toggle Chart</span>
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Main FAB */}
-          <button
-            onClick={() => setShowQuickActions(!showQuickActions)}
-            className={`w-14 h-14 rounded-full shadow-lg transition-all duration-300 btn-bounce touch-target ${
-              showQuickActions 
-                ? 'bg-red-600 hover:bg-red-700 rotate-45' 
-                : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
-            }`}
-          >
-            <Plus className="h-6 w-6 text-white mx-auto" />
-          </button>
-        </div>
-      </div>
+
 
       {/* Enhanced Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-gray-800/95 backdrop-blur-sm border-t border-gray-700 px-2 py-2 z-50">
