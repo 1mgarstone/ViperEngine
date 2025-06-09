@@ -262,14 +262,18 @@ export class ViperEngine {
       this.autoTradingState.cycleCount++;
       this.autoTradingState.lastExecution = Date.now();
       
-      // Execute advanced profit trades every 3 cycles for maximum frequency
+      // Execute advanced profit trades every 3 cycles with isolated error handling
       if (this.autoTradingState.cycleCount % 3 === 0) {
-        await this.generateAdvancedProfitTrade();
+        this.generateAdvancedProfitTrade().catch(error => {
+          console.error('Advanced profit trade isolated error:', error);
+        });
       }
       
-      // Execute additional high-frequency micro-profits every cycle
+      // Execute additional high-frequency micro-profits with isolated error handling
       if (this.autoTradingState.cycleCount % 1 === 0) {
-        await this.executeHighFrequencyProfit();
+        this.executeHighFrequencyProfit().catch(error => {
+          console.error('High-frequency profit isolated error:', error);
+        });
       }
       
       // Advanced liquidation scanning across all markets
@@ -941,22 +945,28 @@ export class ViperEngine {
   }
 
   async executeHighFrequencyProfit(): Promise<void> {
-    if (!this.settings) return;
-    
-    const user = await storage.getUser(this.userId);
-    if (!user) return;
-    
-    const currentBalance = await this.getCurrentBalance();
-    
-    // Execute intelligent micro-profit strategy
-    await this.executeIntelligentMicroProfit(currentBalance);
-    
-    // Original micro-profit for display consistency
-    const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
-    const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
-    const microLeverage = Math.floor(Math.random() * 30) + 20;
-    
-    console.log(`⚡ Micro-Profit: +$0.50 on ${selectedAsset} (${microLeverage}x)`);
+    try {
+      if (!this.settings) return;
+      
+      const user = await storage.getUser(this.userId);
+      if (!user) return;
+      
+      const currentBalance = await this.getCurrentBalance();
+      
+      // Execute intelligent micro-profit strategy with promise isolation
+      this.executeIntelligentMicroProfit(currentBalance).catch(error => {
+        console.error('Micro-profit execution isolated error:', error);
+      });
+      
+      // Original micro-profit for display consistency
+      const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
+      const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
+      const microLeverage = Math.floor(Math.random() * 30) + 20;
+      
+      console.log(`⚡ Micro-Profit: +$0.50 on ${selectedAsset} (${microLeverage}x)`);
+    } catch (error) {
+      console.error('High-frequency profit execution error:', error);
+    }
   }
 
   // Intelligent Micro-Profit Strategy Engine
@@ -968,15 +978,16 @@ export class ViperEngine {
       const tradesInBurst = microConfig.burstSize;
       
       for (let i = 0; i < tradesInBurst; i++) {
-        try {
+        // Execute trade with isolated promise handling
+        Promise.resolve().then(async () => {
           await this.executeSingleMicroTrade(microConfig, currentBalance);
           
           // Small delay between micro-trades (10-50ms simulation)
           await new Promise(resolve => setTimeout(resolve, Math.random() * 40 + 10));
-        } catch (error) {
-          // Continue with next trade if one fails
-          console.error(`Micro-trade ${i + 1} failed:`, error);
-        }
+        }).catch(error => {
+          // Isolated error handling prevents promise rejection propagation
+          console.error(`Micro-trade ${i + 1} isolated error:`, error);
+        });
       }
     } catch (error) {
       console.error('Micro-profit strategy execution error:', error);
@@ -1053,8 +1064,10 @@ export class ViperEngine {
       // Apply minimum and maximum bounds
       const finalProfit = Math.max(0.05, Math.min(calculatedProfit, currentBalance * 0.05));
       
-      // Execute the trade
-      await this.processMicroTrade(finalProfit);
+      // Execute the trade with isolated promise handling
+      Promise.resolve(this.processMicroTrade(finalProfit)).catch(error => {
+        console.error('Micro-trade processing isolated error:', error);
+      });
     } catch (error) {
       // Silently handle micro-trade errors to prevent disruption
       console.error('Micro-trade execution error:', error);
