@@ -44,12 +44,98 @@ export class ViperEngine {
   private profitOptimizer: Map<string, ProfitOptimizer> = new Map();
   private marketAnalysis: Map<string, any> = new Map();
   
-  // Micro-trade strategy state
+  // Systematic trading progression state
   private microTradeEnabled: boolean = true;
   private microTradeIntensity: number = 3;
+  private viperStrategyEnabled: boolean = false;
+  private systematicProgression: boolean = true;
+  private targetThreshold: number = 200.00; // USDT threshold for VIPER activation
   
   constructor(userId: number) {
     this.userId = userId;
+    // Initialize systematic trading progression
+    this.initializeSystematicTrading();
+  }
+
+  // Initialize systematic trading progression
+  private async initializeSystematicTrading(): Promise<void> {
+    try {
+      const user = await storage.getUser(this.userId);
+      if (!user) return;
+
+      const currentBalance = parseFloat(user.paperBalance);
+      
+      // Reset demo balance to $10.00 if starting fresh
+      if (currentBalance === 0 || currentBalance > 1000) {
+        await storage.updateUserBalance(this.userId, "10.00");
+        console.log("🔄 Demo Reset: Starting systematic trading progression from $10.00 USDT");
+      }
+
+      // Configure initial state: Micro-trading only
+      this.microTradeEnabled = true;
+      this.viperStrategyEnabled = false;
+      this.systematicProgression = true;
+      
+      console.log("📈 Systematic Trading Initialized:");
+      console.log("   Phase 1: Micro-trading only ($10 → $200)");
+      console.log("   Phase 2: Combined strategies ($200+)");
+    } catch (error) {
+      console.error("Failed to initialize systematic trading:", error);
+    }
+  }
+
+  // Systematic progression milestone checker
+  private async checkProgressionMilestones(currentBalance: number): Promise<void> {
+    try {
+      // Check if balance has reached $200 threshold for VIPER activation
+      if (!this.viperStrategyEnabled && currentBalance >= this.targetThreshold) {
+        this.viperStrategyEnabled = true;
+        
+        // Enable default VIPER settings if not already configured
+        if (!this.settings) {
+          await this.enableDefaultViperSettings();
+        }
+        
+        console.log("🚀 MILESTONE REACHED: $200.00 USDT");
+        console.log("   ✓ Phase 1 Complete: Micro-trading successful");
+        console.log("   ✓ Phase 2 Activated: Combined strategies enabled");
+        console.log("   ✓ VIPER Strike strategy now active");
+        
+        // Start autonomous trading if not already running
+        if (!this.autoTradingState.isRunning) {
+          this.startAutonomousTrading();
+        }
+      }
+      
+      // Monitor for balance resets or demo restart requests
+      if (currentBalance < 5.00) {
+        console.log("⚠️  Low balance detected - consider demo restart");
+      }
+      
+    } catch (error) {
+      console.error("Progression milestone check failed:", error);
+    }
+  }
+
+  // Enable default VIPER settings for systematic progression
+  private async enableDefaultViperSettings(): Promise<void> {
+    try {
+      const defaultSettings = {
+        userId: this.userId,
+        isEnabled: true,
+        maxLeverage: "125",
+        profitTarget: "2.5",
+        stopLoss: "1.0",
+        maxConcurrentTrades: "3",
+        balanceMultiplier: "5.0",
+        positionScaling: "1.2"
+      };
+      
+      this.settings = await storage.createViperSettings(defaultSettings);
+      console.log("⚙️  Default VIPER settings activated for systematic trading");
+    } catch (error) {
+      console.error("Failed to enable default VIPER settings:", error);
+    }
   }
 
   // Environment-aware balance management
@@ -957,6 +1043,11 @@ export class ViperEngine {
       
       const currentBalance = await this.getCurrentBalance();
       
+      // Check systematic progression milestones
+      if (this.systematicProgression) {
+        await this.checkProgressionMilestones(currentBalance);
+      }
+      
       // Only execute micro-profit strategy if enabled
       if (this.microTradeEnabled) {
         // Execute intelligent micro-profit strategy with promise isolation
@@ -1579,5 +1670,23 @@ export class ViperEngine {
 
   getMicroTradeIntensity(): number {
     return this.microTradeIntensity;
+  }
+
+  // Restart systematic progression from $10 USDT
+  restartSystematicProgression(): void {
+    this.microTradeEnabled = true;
+    this.viperStrategyEnabled = false;
+    this.systematicProgression = true;
+    this.autoTradingState.isRunning = false;
+    this.autoTradingState.cycleCount = 0;
+    this.autoTradingState.lastExecution = 0;
+    this.autoTradingState.profitability = 0;
+    this.autoTradingState.successRate = 0;
+    
+    // Clear active trades
+    this.activeTrades.clear();
+    
+    console.log("🔄 Systematic progression restarted from $10.00 USDT");
+    console.log("   Phase 1: Micro-trading only ($10 → $200)");
   }
 }

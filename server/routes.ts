@@ -599,5 +599,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Demo restart endpoint for systematic trading progression
+  app.post("/api/demo/restart", async (req, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      // Reset balance to $10.00 USDT
+      await storage.updateUserBalance(userId, "10.00");
+      
+      // Reset VIPER settings if they exist
+      const existingSettings = await storage.getViperSettings(userId);
+      if (existingSettings) {
+        await storage.updateViperSettings(userId, {
+          isEnabled: false,
+          maxLeverage: "50",
+          profitTarget: "2.0",
+          stopLoss: "1.0",
+          maxConcurrentTrades: "1",
+          balanceMultiplier: "3.0",
+          positionScaling: "1.0"
+        });
+      }
+
+      // Clear all active trades
+      const activeTrades = await storage.getUserViperTrades(userId);
+      for (const trade of activeTrades) {
+        if (trade.status !== 'closed') {
+          await storage.updateViperTrade(trade.id, { status: 'closed' });
+        }
+      }
+
+      // Reinitialize systematic progression
+      globalViperEngine.restartSystematicProgression();
+
+      res.json({ 
+        success: true, 
+        message: "Demo restarted successfully",
+        balance: "10.00",
+        phase: "Phase 1: Micro-trading only ($10 → $200)"
+      });
+    } catch (error) {
+      console.error("Demo restart error:", error);
+      res.status(500).json({ error: "Failed to restart demo" });
+    }
+  });
+
   return httpServer;
 }
