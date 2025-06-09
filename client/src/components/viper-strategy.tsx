@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { LiveTradingSwitch } from "@/components/live-trading-switch";
+
 
 interface ViperStrategyProps {
   userId: number;

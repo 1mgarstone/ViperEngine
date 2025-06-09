@@ -600,12 +600,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Demo restart endpoint for systematic trading progression
-  app.post("/api/demo/restart", async (req, res) => {
+  app.post("/api/restart-demo", async (req, res) => {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      const userId = 1; // Demo user ID for the trading simulation
 
       // Reset balance to $10.00 USDT
       await storage.updateUserBalance(userId, "10.00");

@@ -6,14 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { TradingChart } from "@/components/trading-chart";
-import { OrderForm } from "@/components/order-form";
-import { PortfolioOverview } from "@/components/portfolio-overview";
-import { RiskManagement } from "@/components/risk-management";
 import { MarketData } from "@/components/market-data";
-import { EducationalModal } from "@/components/educational-modal";
 import { ViperStrategy } from "@/components/viper-strategy";
-import { LiveTradingSwitch } from "@/components/live-trading-switch";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { 
   TriangleAlert, 
@@ -33,15 +27,11 @@ import {
 } from "lucide-react";
 
 export default function Dashboard() {
-  const [showEducationalModal, setShowEducationalModal] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const queryClient = useQueryClient();
   
   // Collapsible sections state
-  const [portfolioExpanded, setPortfolioExpanded] = useState(true);
   const [marketExpanded, setMarketExpanded] = useState(true);
-  const [chartExpanded, setChartExpanded] = useState(false);
-  const [ordersExpanded, setOrdersExpanded] = useState(false);
   
   // Swipe gesture state
   const containerRef = useRef<HTMLDivElement>(null);
@@ -144,6 +134,22 @@ export default function Dashboard() {
   const totalProfit = currentBalance - 10;
   const profitPercentage = totalProfit > 0 ? ((currentBalance - 10) / 10) * 100 : 0;
 
+  // Demo restart mutation
+  const restartDemo = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/restart-demo', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to restart demo');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/1'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/viper-trades/1'] });
+    }
+  });
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "dashboard":
@@ -184,6 +190,20 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Demo Restart Button */}
+                <div className="mb-4">
+                  <Button 
+                    onClick={() => restartDemo.mutate()}
+                    disabled={restartDemo.isPending}
+                    variant="outline"
+                    size="sm"
+                    className="w-full bg-orange-600/20 border-orange-500 text-orange-100 hover:bg-orange-600/30"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($10.00 USDT)'}
+                  </Button>
                 </div>
                 
                 <div className="bg-black/20 rounded-lg p-4 mb-4">
