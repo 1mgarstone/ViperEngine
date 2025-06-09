@@ -576,10 +576,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/micro-trade/toggle", async (req, res) => {
     try {
       const { enabled, intensity } = req.body;
-      const viperEngine = getViperEngine(1);
       
       // Update micro-trade settings
-      viperEngine.updateMicroTradeSettings(enabled, intensity || 3);
+      globalViperEngine.updateMicroTradeSettings(enabled, intensity || 3);
       
       res.json({ 
         success: true, 
@@ -593,8 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/micro-trade/status", async (req, res) => {
     try {
-      const viperEngine = getViperEngine(1);
-      const status = viperEngine.getMicroTradeStatus();
+      const status = globalViperEngine.getMicroTradeStatus();
       res.json(status);
     } catch (error) {
       res.status(500).json({ error: "Failed to get micro-trade status" });
