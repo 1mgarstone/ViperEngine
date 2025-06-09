@@ -961,16 +961,25 @@ export class ViperEngine {
 
   // Intelligent Micro-Profit Strategy Engine
   private async executeIntelligentMicroProfit(currentBalance: number): Promise<void> {
-    const microConfig = this.calculateMicroProfitTier(currentBalance);
-    
-    // Execute multiple micro-trades based on balance tier
-    const tradesInBurst = microConfig.burstSize;
-    
-    for (let i = 0; i < tradesInBurst; i++) {
-      await this.executeSingleMicroTrade(microConfig, currentBalance);
+    try {
+      const microConfig = this.calculateMicroProfitTier(currentBalance);
       
-      // Small delay between micro-trades (10-50ms simulation)
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 40 + 10));
+      // Execute multiple micro-trades based on balance tier
+      const tradesInBurst = microConfig.burstSize;
+      
+      for (let i = 0; i < tradesInBurst; i++) {
+        try {
+          await this.executeSingleMicroTrade(microConfig, currentBalance);
+          
+          // Small delay between micro-trades (10-50ms simulation)
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 40 + 10));
+        } catch (error) {
+          // Continue with next trade if one fails
+          console.error(`Micro-trade ${i + 1} failed:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('Micro-profit strategy execution error:', error);
     }
   }
 
@@ -1026,25 +1035,30 @@ export class ViperEngine {
   }
 
   private async executeSingleMicroTrade(config: any, currentBalance: number): Promise<void> {
-    // Calculate intelligent profit with multiple factors
-    const timeMultiplier = this.calculateTimeBasedMultiplier();
-    const balanceBonus = Math.log10(currentBalance / 100 + 1) * 0.3; // Logarithmic bonus
-    const momentumFactor = this.calculateMarketMomentum();
-    const compoundingBonus = config.compoundingRate * (currentBalance / 1000);
-    
-    const calculatedProfit = config.baseProfit * 
-                           config.scalingFactor * 
-                           timeMultiplier * 
-                           (1 + balanceBonus) * 
-                           momentumFactor * 
-                           (1 + compoundingBonus) * 
-                           (0.85 + Math.random() * 0.3); // 85-115% variance
-    
-    // Apply minimum and maximum bounds
-    const finalProfit = Math.max(0.05, Math.min(calculatedProfit, currentBalance * 0.05));
-    
-    // Execute the trade
-    await this.processMicroTrade(finalProfit);
+    try {
+      // Calculate intelligent profit with multiple factors
+      const timeMultiplier = this.calculateTimeBasedMultiplier();
+      const balanceBonus = Math.log10(currentBalance / 100 + 1) * 0.3; // Logarithmic bonus
+      const momentumFactor = this.calculateMarketMomentum();
+      const compoundingBonus = config.compoundingRate * (currentBalance / 1000);
+      
+      const calculatedProfit = config.baseProfit * 
+                             config.scalingFactor * 
+                             timeMultiplier * 
+                             (1 + balanceBonus) * 
+                             momentumFactor * 
+                             (1 + compoundingBonus) * 
+                             (0.85 + Math.random() * 0.3); // 85-115% variance
+      
+      // Apply minimum and maximum bounds
+      const finalProfit = Math.max(0.05, Math.min(calculatedProfit, currentBalance * 0.05));
+      
+      // Execute the trade
+      await this.processMicroTrade(finalProfit);
+    } catch (error) {
+      // Silently handle micro-trade errors to prevent disruption
+      console.error('Micro-trade execution error:', error);
+    }
   }
 
   private calculateTimeBasedMultiplier(): number {
@@ -1072,52 +1086,65 @@ export class ViperEngine {
   }
 
   private async processMicroTrade(profit: number): Promise<void> {
-    const currentBalance = await this.getCurrentBalance();
-    const newBalance = currentBalance + profit;
-    
-    // Update balance
-    await this.updateBalance(newBalance);
-    
-    // Create trade record for comprehensive tracking
-    await storage.createViperTrade({
-      userId: this.userId,
-      instId: 'MICRO-SCALP',
-      side: 'buy',
-      quantity: profit.toFixed(8),
-      entryPrice: '1.00',
-      leverage: 1,
-      takeProfitPrice: null,
-      stopLossPrice: null,
-      status: 'closed',
-      pnl: profit.toFixed(8),
-      clusterId: null
-    });
+    try {
+      const currentBalance = await this.getCurrentBalance();
+      const newBalance = currentBalance + profit;
+      
+      // Update balance with error handling
+      await this.updateBalance(newBalance);
+      
+      // Create trade record for comprehensive tracking
+      await storage.createViperTrade({
+        userId: this.userId,
+        instId: 'MICRO-SCALP',
+        side: 'buy',
+        quantity: profit.toFixed(8),
+        entryPrice: '1.00',
+        leverage: 1,
+        takeProfitPrice: null,
+        stopLossPrice: null,
+        status: 'closed',
+        pnl: profit.toFixed(8),
+        clusterId: null
+      });
 
-    // Selective logging to prevent spam (20% chance)
-    if (Math.random() < 0.2) {
-      console.log(`🔥 Intelligent Micro: +$${profit.toFixed(3)} | Balance: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)}`);
+      // Selective logging to prevent spam (20% chance)
+      if (Math.random() < 0.2) {
+        console.log(`🔥 Intelligent Micro: +$${profit.toFixed(3)} | Balance: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)}`);
+      }
+
+      // Broadcast update for real-time display
+      this.broadcastMicroProfitUpdate(profit, newBalance);
+    } catch (error) {
+      console.error('Micro-trade processing error:', error);
     }
-
-    // Broadcast update for real-time display
-    this.broadcastMicroProfitUpdate(profit, newBalance);
   }
 
   private broadcastMicroProfitUpdate(profit: number, newBalance: number): void {
-    const wss = (global as any).wss;
-    if (wss?.clients) {
-      wss.clients.forEach((client: any) => {
-        if (client.readyState === 1) {
-          client.send(JSON.stringify({
-            type: 'micro_profit_update',
-            data: {
-              userId: this.userId,
-              profit: profit,
-              newBalance: newBalance,
-              timestamp: Date.now()
+    try {
+      const wss = (global as any).wss;
+      if (wss?.clients) {
+        wss.clients.forEach((client: any) => {
+          try {
+            if (client.readyState === 1) {
+              client.send(JSON.stringify({
+                type: 'micro_profit_update',
+                data: {
+                  userId: this.userId,
+                  profit: profit,
+                  newBalance: newBalance,
+                  timestamp: Date.now()
+                }
+              }));
             }
-          }));
-        }
-      });
+          } catch (clientError) {
+            // Silently handle individual client errors
+            console.error('WebSocket client send error:', clientError);
+          }
+        });
+      }
+    } catch (error) {
+      console.error('WebSocket broadcast error:', error);
     }
   }
 
