@@ -19,7 +19,9 @@ import {
   DollarSign,
   Activity,
   Clock,
-  RotateCcw
+  RotateCcw,
+  Play,
+  Square
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -126,6 +128,36 @@ export default function Dashboard() {
     },
     onError: (error: Error) => {
       console.error('Live mode toggle failed:', error.message);
+    }
+  });
+
+  // Start VIPER bot mutation
+  const startViper = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/viper/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to start VIPER bot');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/viper-status'] });
+    }
+  });
+
+  // Stop VIPER bot mutation
+  const stopViper = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/viper/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Failed to stop VIPER bot');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/viper-status'] });
     }
   });
 
@@ -240,26 +272,64 @@ export default function Dashboard() {
                   )}
                 </div>
                 
+                {/* Bot Control Section */}
                 <div className="bg-black/20 rounded-lg p-4 mb-4">
-                  <div className="text-orange-100 text-sm mb-2">Liquidation Scanner:</div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-orange-200">Active Targets</span>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <span className="text-green-300">{isViperRunning ? 'Scanning' : 'Standby'}</span>
+                  <div className="text-orange-100 text-sm mb-3">Bot Control:</div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className={`w-3 h-3 rounded-full ${isViperRunning ? 'bg-green-400 animate-pulse' : 'bg-gray-400'}`} />
+                        <span className="text-white font-medium">
+                          {isViperRunning ? 'ACTIVE' : 'STANDBY'}
+                        </span>
+                        {userData?.isLiveMode && (
+                          <Badge className="bg-red-600 text-white text-xs">LIVE</Badge>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (isViperRunning) {
+                            stopViper.mutate();
+                          } else {
+                            startViper.mutate();
+                          }
+                        }}
+                        disabled={startViper.isPending || stopViper.isPending}
+                        size="sm"
+                        className={`${
+                          isViperRunning 
+                            ? 'bg-red-600 hover:bg-red-700 text-white' 
+                            : 'bg-green-600 hover:bg-green-700 text-white'
+                        }`}
+                      >
+                        {isViperRunning ? (
+                          <>
+                            <Square className="h-4 w-4 mr-2" />
+                            Stop Bot
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-4 w-4 mr-2" />
+                            Start Bot
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    <div className="bg-orange-600/30 rounded p-2">
+                      <div className="text-orange-200 text-xs">Scanner Status</div>
+                      <div className="text-white font-mono text-sm">
+                        {isViperRunning ? 'Scanning liquidations...' : 'Ready to scan'}
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="bg-orange-600/30 rounded p-2">
-                        <div className="text-orange-200">Long Liquidations</div>
-                        <div className="text-white font-mono">$4.2M</div>
+                    
+                    {userData?.isLiveMode && (
+                      <div className="bg-red-600/20 border border-red-500/30 rounded p-2">
+                        <div className="text-red-300 text-xs">
+                          ⚠️ Live mode: Bot automatically stops when switching to live trading for safety
+                        </div>
                       </div>
-                      <div className="bg-red-600/30 rounded p-2">
-                        <div className="text-red-200">Short Liquidations</div>
-                        <div className="text-white font-mono">$8.7M</div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
