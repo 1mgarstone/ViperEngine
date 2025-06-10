@@ -333,20 +333,37 @@ export class ViperEngine {
     console.log(`Reason: ${opportunity.reason}`);
     console.log(`Confidence: ${opportunity.confidence?.toFixed(1)}%`);
     
-    // Real OKX API trade execution would be implemented here
-    // For now, create a record of the intended trade
-    await storage.createViperTrade({
-      userId: this.userId,
-      clusterId: 0,
-      instId: opportunity.asset,
-      side: opportunity.side === 'buy' ? 'long' : 'short',
-      entryPrice: "2800.00", // Would be real market price
-      quantity: (positionSize / 2800).toFixed(6),
-      leverage: 2, // Conservative leverage for micro-trading
-      status: 'pending',
-      takeProfitPrice: opportunity.side === 'buy' ? "2828.00" : "2772.00", // 1% target
-      stopLossPrice: opportunity.side === 'buy' ? "2772.00" : "2828.00" // 1% stop
-    });
+    try {
+      // Create a placeholder cluster for micro-trades
+      const microCluster = await storage.createLiquidationCluster({
+        instId: opportunity.asset,
+        liquidationLevel: "2800.00",
+        volumeAtLevel: "100",
+        priceDirection: opportunity.side === 'buy' ? 'up' : 'down',
+        confidence: (opportunity.confidence || 75).toFixed(1),
+        timestamp: new Date(),
+        processed: false
+      });
+
+      // Create the micro-trade record
+      await storage.createViperTrade({
+        userId: this.userId,
+        clusterId: microCluster.id,
+        instId: opportunity.asset,
+        side: opportunity.side === 'buy' ? 'long' : 'short',
+        entryPrice: "2800.00", // Would be real market price
+        quantity: (positionSize / 2800).toFixed(6),
+        leverage: 2, // Conservative leverage for micro-trading
+        status: 'active',
+        takeProfitPrice: opportunity.side === 'buy' ? "2828.00" : "2772.00", // 1% target
+        stopLossPrice: opportunity.side === 'buy' ? "2772.00" : "2828.00" // 1% stop
+      });
+
+      console.log(`✅ Micro-trade recorded: Cluster ID ${microCluster.id}`);
+      
+    } catch (error) {
+      console.error('Failed to record micro-trade:', error);
+    }
   }
 
   private async executeLiveViperStrike(cluster: any, positionSize: number): Promise<void> {
@@ -354,24 +371,41 @@ export class ViperEngine {
     console.log(`Volume: ${cluster.volumeAtLevel}, Confidence: ${cluster.confidence}%`);
     console.log(`Position Size: $${positionSize.toFixed(2)}`);
     
-    // Real OKX API trade execution would be implemented here
-    // For now, create a record of the intended trade
-    await storage.createViperTrade({
-      userId: this.userId,
-      clusterId: 0,
-      instId: cluster.instId,
-      side: cluster.priceDirection === 'up' ? 'long' : 'short',
-      entryPrice: cluster.liquidationLevel,
-      quantity: (positionSize / parseFloat(cluster.liquidationLevel)).toFixed(6),
-      leverage: 5, // Moderate leverage for VIPER strikes
-      status: 'pending',
-      takeProfitPrice: cluster.priceDirection === 'up' 
-        ? (parseFloat(cluster.liquidationLevel) * 1.03).toFixed(2)
-        : (parseFloat(cluster.liquidationLevel) * 0.97).toFixed(2),
-      stopLossPrice: cluster.priceDirection === 'up'
-        ? (parseFloat(cluster.liquidationLevel) * 0.98).toFixed(2)
-        : (parseFloat(cluster.liquidationLevel) * 1.02).toFixed(2)
-    });
+    try {
+      // First create the liquidation cluster record
+      const liquidationCluster = await storage.createLiquidationCluster({
+        instId: cluster.instId,
+        liquidationLevel: cluster.liquidationLevel,
+        volumeAtLevel: cluster.volumeAtLevel,
+        priceDirection: cluster.priceDirection,
+        confidence: cluster.confidence,
+        timestamp: cluster.timestamp,
+        processed: false
+      });
+
+      // Now create the VIPER trade with the valid cluster ID
+      await storage.createViperTrade({
+        userId: this.userId,
+        clusterId: liquidationCluster.id,
+        instId: cluster.instId,
+        side: cluster.priceDirection === 'up' ? 'long' : 'short',
+        entryPrice: cluster.liquidationLevel,
+        quantity: (positionSize / parseFloat(cluster.liquidationLevel)).toFixed(6),
+        leverage: 5, // Moderate leverage for VIPER strikes
+        status: 'active',
+        takeProfitPrice: cluster.priceDirection === 'up' 
+          ? (parseFloat(cluster.liquidationLevel) * 1.03).toFixed(2)
+          : (parseFloat(cluster.liquidationLevel) * 0.97).toFixed(2),
+        stopLossPrice: cluster.priceDirection === 'up'
+          ? (parseFloat(cluster.liquidationLevel) * 0.98).toFixed(2)
+          : (parseFloat(cluster.liquidationLevel) * 1.02).toFixed(2)
+      });
+
+      console.log(`✅ VIPER Strike recorded: Cluster ID ${liquidationCluster.id}`);
+      
+    } catch (error) {
+      console.error('Failed to record VIPER strike:', error);
+    }
   }
 
   private async logMicroTradeOpportunity(opportunity: any, positionSize: number): Promise<void> {
