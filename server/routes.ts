@@ -468,18 +468,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        globalViperEngine.startAutonomousTrading();
+        // Start both VIPER Strike and micro-trading strategies
+        const viperResult = globalViperEngine.startAutonomousTrading();
+        const realisticResult = await import('./realistic-trading').then(module => 
+          module.realisticTradingEngine.start()
+        );
+        
         res.json({ 
           success: true, 
-          message: "VIPER autonomous trading started",
-          state: globalViperEngine.getAutonomousState()
+          message: "VIPER autonomous trading and micro-trading strategies started",
+          viperState: globalViperEngine.getAutonomousState(),
+          microTradingState: realisticResult
         });
       } else if (action === "stop") {
-        globalViperEngine.stopAutonomousTrading();
+        // Stop both VIPER Strike and micro-trading strategies
+        const viperResult = globalViperEngine.stopAutonomousTrading();
+        const realisticResult = await import('./realistic-trading').then(module => 
+          module.realisticTradingEngine.stop()
+        );
+        
         res.json({ 
           success: true, 
-          message: "VIPER autonomous trading stopped",
-          state: globalViperEngine.getAutonomousState()
+          message: "VIPER autonomous trading and micro-trading strategies stopped",
+          viperState: globalViperEngine.getAutonomousState(),
+          microTradingState: realisticResult
         });
       } else {
         res.status(400).json({ message: "Invalid action. Use 'start' or 'stop'" });

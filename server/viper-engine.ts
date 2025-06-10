@@ -242,8 +242,14 @@ export class ViperEngine {
         await this.executeViperStrikeLiquidation(currentBalance, false);
         await this.executeIntelligentMicroTrading(currentBalance, false);
         await this.executeNanoTrading(currentBalance, false);
+      } else if (currentBalance >= 1000) {
+        // Phase 4: VIPER Strike Premium ($1000+) - Maximum profit acceleration
+        console.log(`VIPER Strike Phase 4: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.35).toFixed(2)} position size`);
+        await this.executeViperStrikeLiquidation(currentBalance, false);
+        await this.executeIntelligentMicroTrading(currentBalance, false);
+        await this.executeNanoTrading(currentBalance, false);
       } else if (currentBalance >= 500) {
-        // Phase 3: VIPER Strike Maximum ($500+) - Aggressive profit maximization
+        // Phase 3: VIPER Strike Maximum ($500-$1000) - Aggressive profit maximization
         console.log(`VIPER Strike Phase 3: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.30).toFixed(2)} position size`);
         await this.executeViperStrikeLiquidation(currentBalance, false);
         await this.executeIntelligentMicroTrading(currentBalance, false);
@@ -675,8 +681,9 @@ export class ViperEngine {
       if (user) {
         const currentBalance = parseFloat(user.paperBalance);
         if (currentBalance < 50) profitMultiplier = 0.35; // 35% for recovery mode
-        if (currentBalance >= 150) profitMultiplier = 0.30; // 30% for mid-tier
-        if (currentBalance >= 500) profitMultiplier = 0.40; // 40% for high-tier
+        if (currentBalance >= 150) profitMultiplier = 0.35; // 35% for mid-tier
+        if (currentBalance >= 500) profitMultiplier = 0.45; // 45% for high-tier
+        if (currentBalance >= 1000) profitMultiplier = 0.55; // 55% for premium tier
       }
       
       const basePnL = positionSize * profitMultiplier;
