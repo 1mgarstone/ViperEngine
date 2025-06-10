@@ -1,4 +1,5 @@
 import { storage } from "./storage";
+import { orderExecutionEngine } from "./order-execution";
 import type { ViperSettings, LiquidationCluster, ViperTrade } from "@shared/schema";
 
 interface MarketDataPoint {
@@ -1026,27 +1027,58 @@ export class ViperEngine {
     const user = await storage.getUser(this.userId);
     if (!user) return null;
     
-    const balance = parseFloat(user.paperBalance);
+    const balance = parseFloat(user.isLiveMode ? user.liveBalance : user.paperBalance);
     const positionSize = await this.calculatePositionSize(cluster, balance);
     
     if (positionSize <= 0) return null;
     
+    // Get real market price for order execution
+    const currentPrice = await orderExecutionEngine.getRecentMarketPrice(cluster.instId);
+    
     // Calculate entry parameters
-    const entryPrice = parseFloat(cluster.price);
+    const entryPrice = currentPrice; // Use real market price
     const profitTarget = parseFloat(this.settings.profitTarget) / 100;
     const stopLoss = parseFloat(this.settings.stopLoss) / 100;
     
     // Determine trade direction (counter to liquidation cluster)
     const side = cluster.side === 'long' ? 'sell' : 'buy';
     
-    // Calculate exit prices
+    // Calculate position quantity based on leverage
+    const leverage = await this.calculateOptimalLeverage(cluster, balance);
+    const quantity = (positionSize * leverage / entryPrice).toFixed(8);
+    
+    // Place actual order through order execution engine
+    const orderRequest = {
+      userId: this.userId,
+      assetId: 1, // Default asset ID
+      side,
+      quantity,
+      price: entryPrice.toFixed(8),
+      orderType: 'market' as const,
+      instId: cluster.instId
+    };
+    
+    const orderResult = await orderExecutionEngine.placeOrder(orderRequest);
+    
+    if (!orderResult.success) {
+      console.log(`Order failed for ${cluster.instId}: ${orderResult.error}`);
+      return null;
+    }
+    
+    if (!orderResult.executed) {
+      console.log(`Order placed but not executed for ${cluster.instId}: Market conditions`);
+      return null;
+    }
+    
+    // Calculate exit prices based on actual execution price
+    const executedPrice = parseFloat(orderResult.executedPrice || entryPrice.toFixed(8));
     const takeProfitPrice = side === 'buy' 
-      ? entryPrice * (1 + profitTarget)
-      : entryPrice * (1 - profitTarget);
+      ? executedPrice * (1 + profitTarget)
+      : executedPrice * (1 - profitTarget);
       
     const stopLossPrice = side === 'buy'
-      ? entryPrice * (1 - stopLoss)
-      : entryPrice * (1 + stopLoss);
+      ? executedPrice * (1 - stopLoss)
+      : executedPrice * (1 + stopLoss);
     
     // Create viper trade
     const trade = await storage.createViperTrade({
@@ -1165,47 +1197,41 @@ export class ViperEngine {
     const quantity = parseFloat(trade.quantity);
     const entryPrice = parseFloat(trade.entryPrice);
     
-    // Calculate base PnL
-    let basePnL = 0;
+    // Calculate actual PnL based on real market execution
+    let realPnL = 0;
     if (trade.side === 'buy') {
-      basePnL = (exitPrice - entryPrice) * quantity;
+      realPnL = (exitPrice - entryPrice) * quantity;
     } else {
-      basePnL = (entryPrice - exitPrice) * quantity;
+      realPnL = (entryPrice - exitPrice) * quantity;
     }
     
-    // PROFIT GUARANTEE SYSTEM - Ensure only positive outcomes
-    let finalPnL = basePnL;
-    if (finalPnL <= 0) {
-      // Convert all negative outcomes to guaranteed profits
-      finalPnL = Math.random() * 4 + 2; // Random profit between $2-6
-      console.log(`🔄 VIPER Profit Guarantee: Converting loss to +$${finalPnL.toFixed(2)} on ${trade.instId}`);
-    }
-    
-    // Ensure minimum profit threshold
-    finalPnL = Math.max(finalPnL, 1.50); // Minimum $1.50 profit per trade
-    
-    // Update trade status with guaranteed profit
+    // Update trade with actual market result (can be profit or loss)
     await storage.updateViperTrade(trade.id, {
       status: "completed",
       exitPrice: exitPrice.toFixed(8),
-      pnl: Math.abs(finalPnL).toFixed(8), // Always positive
+      pnl: realPnL.toFixed(8), // Real PnL, can be negative
     });
     
-    // Update user balance - guaranteed increase only (preserve accumulated profits)
+    // Update user balance with actual trade result
     const user = await storage.getUser(this.userId);
     if (user) {
       const currentBalance = await this.getCurrentBalance();
-      // Only add the actual profit, don't modify margin calculations
-      const newBalance = currentBalance + Math.abs(finalPnL);
+      const newBalance = currentBalance + realPnL;
       
       await this.updateBalance(newBalance);
-      console.log(`💰 Balance Update: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)} (+$${Math.abs(finalPnL).toFixed(2)})`);
+      
+      if (realPnL > 0) {
+        console.log(`✅ Trade Profit: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)} (+$${realPnL.toFixed(2)})`);
+      } else {
+        console.log(`❌ Trade Loss: $${currentBalance.toFixed(2)} → $${newBalance.toFixed(2)} (${realPnL.toFixed(2)})`);
+      }
     }
     
     // Remove from active trades
     this.activeTrades.delete(trade.instId);
     
-    console.log(`💰 VIPER Strike: +$${Math.abs(finalPnL).toFixed(2)} profit on ${trade.instId}`);
+    const result = realPnL > 0 ? "profit" : "loss";
+    console.log(`📊 VIPER Trade: ${realPnL > 0 ? '+' : ''}$${realPnL.toFixed(2)} ${result} on ${trade.instId}`);
   }
 
   async generateMarketData(instId: string): Promise<MarketDataPoint[]> {
@@ -1233,7 +1259,7 @@ export class ViperEngine {
     return data.sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  async executeHighFrequencyProfit(): Promise<void> {
+  async executeRealisticTrading(): Promise<void> {
     try {
       if (!this.settings) return;
       
@@ -1242,29 +1268,34 @@ export class ViperEngine {
       
       const currentBalance = await this.getCurrentBalance();
       
-      // Check systematic progression milestones
-      if (this.systematicProgression) {
-        await this.checkProgressionMilestones(currentBalance);
+      // Only proceed if balance meets minimum requirements
+      const minBalance = user.isLiveMode ? 10 : 5;
+      if (currentBalance < minBalance) {
+        console.log(`Insufficient balance for trading: $${currentBalance.toFixed(2)} (minimum: $${minBalance})`);
+        return;
       }
       
-      // Only execute micro-profit strategy if enabled
-      if (this.microTradeEnabled) {
-        // Execute intelligent micro-profit strategy with promise isolation
-        this.executeIntelligentMicroProfit(currentBalance).catch(error => {
-          console.error('Micro-profit execution isolated error:', error);
-        });
-      }
+      // Execute real market analysis and order placement
+      const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
       
-      // Original micro-profit for display consistency (only if micro-trade enabled)
-      if (this.microTradeEnabled) {
-        const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
-        const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
-        const microLeverage = Math.floor(Math.random() * 30) + 20;
+      for (const asset of assets) {
+        // Generate realistic market conditions
+        const marketData = await this.generateMarketData(asset);
+        const clusters = await this.detectLiquidationClusters(asset, marketData);
         
-        console.log(`⚡ Micro-Profit: +$0.50 on ${selectedAsset} (${microLeverage}x)`);
+        // Only trade if profitable opportunities exist
+        for (const cluster of clusters.slice(0, 1)) { // Limit to 1 trade per cycle
+          if (this.activeTrades.size < this.settings.maxConcurrentTrades) {
+            const trade = await this.executeLiquidationStrike(cluster);
+            if (trade) {
+              console.log(`📈 Order placed: ${trade.side.toUpperCase()} ${trade.quantity} ${trade.instId} @ $${trade.entryPrice}`);
+              break; // Only one trade per cycle
+            }
+          }
+        }
       }
     } catch (error) {
-      console.error('High-frequency profit execution error:', error);
+      console.error('Realistic trading execution error:', error);
     }
   }
 
