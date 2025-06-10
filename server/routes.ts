@@ -359,7 +359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(settings);
     } catch (error) {
       console.error("VIPER settings save error:", error);
-      res.status(400).json({ message: "Invalid VIPER settings data", error: error.message });
+      res.status(400).json({ message: "Invalid VIPER settings data", error: String(error) });
     }
   });
 
@@ -407,7 +407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (balanceResult.success) {
         // Update user's live balance with current OKX balance
-        await storage.updateUserLiveBalance(1, balanceResult.usdtBalance.toString());
+        await storage.updateUserBalance(1, balanceResult.usdtBalance.toString());
         
         res.json({
           success: true,

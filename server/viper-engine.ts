@@ -41,7 +41,7 @@ export class ViperEngine {
   async initialize(): Promise<void> {
     try {
       const settings = await storage.getViperSettings(this.userId);
-      this.settings = settings;
+      this.settings = settings || null;
       
       // Load micro-trade settings from database or use defaults
       const savedMicroSettings = await this.loadMicroTradeSettings();
