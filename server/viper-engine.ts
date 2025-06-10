@@ -229,22 +229,30 @@ export class ViperEngine {
       
       console.log(`Trading cycle ${this.autoTradingState.cycleCount}: Balance $${currentBalance.toFixed(2)} (${user.isLiveMode ? 'LIVE' : 'DEMO'})`);
 
-      // Enhanced VIPER Strike - Widened range and aggressive profit targeting
-      if (currentBalance >= 50 && currentBalance < 150) {
-        // Phase 1: VIPER Strike Initial ($50-$150) - Enhanced execution with wider range
-        console.log(`VIPER Strike Phase 1: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.12).toFixed(2)} position size`);
+      // Enhanced VIPER Strike - Aggressive multi-tier profit system
+      if (currentBalance >= 100 && currentBalance < 200) {
+        // Phase 1: VIPER Strike Accelerated ($100-$200) - Enhanced position sizing
+        console.log(`VIPER Strike Phase 1: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.15).toFixed(2)} position size`);
         await this.executeViperStrikeLiquidation(currentBalance, false);
         await this.executeIntelligentMicroTrading(currentBalance, false);
-      } else if (currentBalance >= 150 && currentBalance < 500) {
-        // Phase 2: VIPER Strike Enhanced ($150-$500) - Higher leverage and wider range
-        console.log(`VIPER Strike Phase 2: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.18).toFixed(2)} position size`);
+        await this.executeNanoTrading(currentBalance, false); // Additional nano-trading layer
+      } else if (currentBalance >= 200 && currentBalance < 500) {
+        // Phase 2: VIPER Strike Enhanced ($200-$500) - Higher leverage execution
+        console.log(`VIPER Strike Phase 2: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.20).toFixed(2)} position size`);
         await this.executeViperStrikeLiquidation(currentBalance, false);
         await this.executeIntelligentMicroTrading(currentBalance, false);
+        await this.executeNanoTrading(currentBalance, false);
       } else if (currentBalance >= 500) {
-        // Phase 3: VIPER Strike Advanced ($500+) - Maximum aggressive execution
-        console.log(`VIPER Strike Phase 3: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.25).toFixed(2)} position size`);
+        // Phase 3: VIPER Strike Maximum ($500+) - Aggressive profit maximization
+        console.log(`VIPER Strike Phase 3: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.30).toFixed(2)} position size`);
         await this.executeViperStrikeLiquidation(currentBalance, false);
         await this.executeIntelligentMicroTrading(currentBalance, false);
+        await this.executeNanoTrading(currentBalance, false);
+      } else if (currentBalance >= 50 && currentBalance < 100) {
+        // Recovery Plus: Enhanced recovery with wider range
+        console.log(`Recovery Plus: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.10).toFixed(2)} position size`);
+        await this.executeViperStrikeLiquidation(currentBalance, false);
+        await this.executeRecoveryTrading(currentBalance, false);
       } else if (currentBalance < 50) {
         console.log(`Recovery mode: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.08).toFixed(2)} position size`);
         await this.executeRecoveryTrading(currentBalance, false);
@@ -634,8 +642,8 @@ export class ViperEngine {
       const cluster = clusters[i];
       const confidence = parseFloat(cluster.confidence);
       
-      // Execute strikes above 80% confidence for consistent profitability
-      if (confidence > 80) {
+      // Execute strikes above 75% confidence for increased opportunity range
+      if (confidence > 75) {
         // Calculate position size based on cluster confidence and risk
         const adjustedPositionSize = positionSize * (confidence / 100) * (1.3 + Math.random() * 0.7);
         
@@ -649,7 +657,7 @@ export class ViperEngine {
     }
     
     if (executedStrikes === 0) {
-      console.log(`⏳ Waiting for higher confidence opportunities (>85%)`);
+      console.log(`⏳ Waiting for higher confidence opportunities (>75%)`);
     }
   }
 
