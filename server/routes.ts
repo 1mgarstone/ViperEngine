@@ -392,6 +392,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // OKX Balance Verification Route
+  app.get("/api/okx/balance-check", async (req, res) => {
+    try {
+      const { OKXClient } = await import('./okx-client');
+      const okxClient = new OKXClient(
+        process.env.OKX_API_KEY!,
+        process.env.OKX_SECRET_KEY!,
+        process.env.OKX_PASSPHRASE!,
+        false // Live mode
+      );
+      
+      const balanceResult = await okxClient.getAccountBalance();
+      
+      if (balanceResult.success) {
+        // Update user's live balance with current OKX balance
+        await storage.updateUserLiveBalance(1, balanceResult.usdtBalance.toString());
+        
+        res.json({
+          success: true,
+          currentBalance: balanceResult.usdtBalance,
+          message: "Balance updated from OKX account"
+        });
+      } else {
+        res.json({
+          success: false,
+          error: balanceResult.error,
+          message: "Failed to fetch OKX balance"
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ 
+        success: false, 
+        error: error.message,
+        message: "OKX balance check failed" 
+      });
+    }
+  });
+
   // VIPER Autonomous Trading Controls
   app.post("/api/viper-control/:action", async (req, res) => {
     try {
