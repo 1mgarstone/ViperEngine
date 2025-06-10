@@ -105,7 +105,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = await storage.updateUserBalance(userId, "200.00000000");
       }
       
-      res.json(user);
+      // Enhance user data with balance display info
+      const enhancedUser = {
+        ...user,
+        liveBalance: user.liveBalance || "0.00000000",
+        paperBalance: user.paperBalance || "10.00000000"
+      };
+      
+      res.json(enhancedUser);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
