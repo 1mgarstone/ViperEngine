@@ -887,6 +887,17 @@ export class DatabaseStorage implements IStorage {
     return settings || undefined;
   }
 
+  async createViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
+    const [newSettings] = await db
+      .insert(viperSettings)
+      .values({
+        ...insertSettings,
+        updatedAt: new Date()
+      })
+      .returning();
+    return newSettings;
+  }
+
   async updateViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
     try {
       const existing = await this.getViperSettings(insertSettings.userId);
