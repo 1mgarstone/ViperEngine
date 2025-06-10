@@ -47,6 +47,36 @@ interface ViperStatus {
 
 export function ViperStrategy({ userId }: ViperStrategyProps) {
   const { toast } = useToast();
+  const [livePrices, setLivePrices] = useState<{[key: string]: {price: number, change: number}}>({});
+  
+  // WebSocket connection for live price updates
+  useEffect(() => {
+    const ws = new WebSocket('wss://stream.binance.com:9443/ws/!ticker@arr');
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const priceUpdates: {[key: string]: {price: number, change: number}} = {};
+      
+      // Filter for the cryptocurrencies we're tracking
+      const trackedSymbols = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'ADAUSDT', 'DOGEUSDT', 'LINKUSDT', 'MATICUSDT', 'AVAXUSDT'];
+      
+      data.forEach((ticker: any) => {
+        if (trackedSymbols.includes(ticker.s)) {
+          const symbol = ticker.s.replace('USDT', '');
+          priceUpdates[symbol] = {
+            price: parseFloat(ticker.c),
+            change: parseFloat(ticker.P)
+          };
+        }
+      });
+      
+      setLivePrices(priceUpdates);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
   
   // Add user data query for live/demo mode  
   const { data: userTradingData } = useQuery({
@@ -682,23 +712,37 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {assetsData && Array.isArray(assetsData) && assetsData.map((asset: any) => (
-              <div key={asset.id} className="bg-gray-700/50 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">{asset.symbol}</span>
-                  <span className={`text-sm px-2 py-1 rounded ${
-                    parseFloat(asset.change24h) >= 0 
-                      ? 'bg-green-500/20 text-green-400' 
-                      : 'bg-red-500/20 text-red-400'
-                  }`}>
-                    {parseFloat(asset.change24h) >= 0 ? '+' : ''}{parseFloat(asset.change24h).toFixed(2)}%
-                  </span>
+            {assetsData && Array.isArray(assetsData) && assetsData.map((asset: any) => {
+              const livePrice = livePrices[asset.symbol];
+              const currentPrice = livePrice ? livePrice.price : parseFloat(asset.price);
+              const currentChange = livePrice ? livePrice.change : parseFloat(asset.change24h);
+              
+              return (
+                <div key={asset.id} className="bg-gray-700/50 rounded-lg p-3 relative">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-medium">{asset.symbol}</span>
+                    <div className="flex items-center space-x-1">
+                      {livePrice && (
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                      )}
+                      <span className={`text-sm px-2 py-1 rounded ${
+                        currentChange >= 0 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {currentChange >= 0 ? '+' : ''}{currentChange.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-gray-300 text-lg font-mono">
+                    ${currentPrice.toFixed(2)}
+                  </div>
+                  {livePrice && (
+                    <div className="text-xs text-green-400 mt-1">LIVE</div>
+                  )}
                 </div>
-                <div className="text-gray-300 text-lg font-mono">
-                  ${parseFloat(asset.price).toFixed(2)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
