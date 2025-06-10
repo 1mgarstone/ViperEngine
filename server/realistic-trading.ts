@@ -6,6 +6,8 @@ export class RealisticTradingEngine {
   private userId: number;
   private isRunning: boolean = false;
   private tradingInterval: NodeJS.Timeout | null = null;
+  private parallelTradingIntervals: NodeJS.Timeout[] = [];
+  private activeTrades: Set<string> = new Set();
 
   constructor(userId: number) {
     this.userId = userId;
@@ -34,10 +36,11 @@ export class RealisticTradingEngine {
 
     this.isRunning = true;
     this.scheduleTradingCycle();
+    this.startParallelTradingStreams();
     
     return { 
       success: true, 
-      message: `Trading started with $${currentBalance.toFixed(2)} in ${user.isLiveMode ? 'LIVE' : 'DEMO'} mode` 
+      message: `Aggressive multi-stream trading started with $${currentBalance.toFixed(2)} in ${user.isLiveMode ? 'LIVE' : 'DEMO'} mode` 
     };
   }
 
@@ -47,14 +50,105 @@ export class RealisticTradingEngine {
       clearTimeout(this.tradingInterval);
       this.tradingInterval = null;
     }
-    return { success: true, message: "Trading stopped" };
+    // Stop all parallel trading streams
+    this.parallelTradingIntervals.forEach(interval => clearTimeout(interval));
+    this.parallelTradingIntervals = [];
+    this.activeTrades.clear();
+    return { success: true, message: "All trading streams stopped" };
+  }
+
+  private startParallelTradingStreams(): void {
+    if (!this.isRunning) return;
+
+    // Start 4 parallel trading streams for maximum market engagement
+    const streamCount = 4;
+    
+    for (let i = 0; i < streamCount; i++) {
+      this.scheduleParallelStream(i);
+    }
+  }
+
+  private scheduleParallelStream(streamId: number): void {
+    if (!this.isRunning) return;
+
+    // Stagger each stream with different intervals (1-5 seconds)
+    const baseInterval = 1000 + (streamId * 1000); // 1s, 2s, 3s, 4s
+    const randomInterval = Math.random() * 3000 + baseInterval; // Add 0-3s randomness
+    
+    const interval = setTimeout(async () => {
+      await this.executeParallelTrade(streamId);
+      this.scheduleParallelStream(streamId);
+    }, randomInterval);
+    
+    this.parallelTradingIntervals.push(interval);
+  }
+
+  private async executeParallelTrade(streamId: number): Promise<void> {
+    try {
+      const user = await storage.getUser(this.userId);
+      if (!user || !this.isRunning) return;
+
+      const currentBalance = parseFloat(user.isLiveMode ? user.liveBalance : user.paperBalance);
+      
+      // Aggressive market analysis for parallel streams - 90% trade rate
+      const shouldTrade = Math.random() > 0.1;
+      if (!shouldTrade) return;
+
+      // Different asset pools for each stream to avoid conflicts
+      const assetPools = [
+        ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP', 'MATIC-USDT-SWAP'],
+        ['DOT-USDT-SWAP', 'LINK-USDT-SWAP', 'UNI-USDT-SWAP', 'XRP-USDT-SWAP', 'DOGE-USDT-SWAP'],
+        ['AVAX-USDT-SWAP', 'ATOM-USDT-SWAP', 'SAND-USDT-SWAP', 'MANA-USDT-SWAP', 'APE-USDT-SWAP'],
+        ['VET-USDT-SWAP', 'TRX-USDT-SWAP', 'FTM-USDT-SWAP', 'ALGO-USDT-SWAP', 'EOS-USDT-SWAP']
+      ];
+
+      const assetPool = assetPools[streamId] || assetPools[0];
+      const selectedAsset = assetPool[Math.floor(Math.random() * assetPool.length)];
+      
+      // Prevent simultaneous trades on same asset
+      if (this.activeTrades.has(selectedAsset)) return;
+      
+      this.activeTrades.add(selectedAsset);
+      
+      try {
+        const side = Math.random() > 0.5 ? 'buy' : 'sell';
+        const currentPrice = await orderExecutionEngine.getRecentMarketPrice(selectedAsset);
+        
+        // Smaller position sizes for parallel trades (1-3% per stream)
+        const positionRatio = Math.random() * 0.02 + 0.01; // 1-3%
+        const positionValue = currentBalance * positionRatio;
+        const quantity = (positionValue / currentPrice).toFixed(8);
+
+        const orderRequest = {
+          userId: this.userId,
+          assetId: 1,
+          side,
+          quantity,
+          price: currentPrice.toFixed(8),
+          orderType: 'market' as const,
+          instId: selectedAsset
+        };
+
+        const result = await orderExecutionEngine.placeOrder(orderRequest);
+        
+        if (result.success && result.executed) {
+          console.log(`🚀 Stream-${streamId} executed: ${side.toUpperCase()} ${quantity} ${selectedAsset} @ $${currentPrice.toFixed(4)}`);
+        }
+      } finally {
+        // Release asset lock after 2 seconds
+        setTimeout(() => this.activeTrades.delete(selectedAsset), 2000);
+      }
+
+    } catch (error) {
+      console.error(`Stream-${streamId} error:`, error);
+    }
   }
 
   private scheduleTradingCycle(): void {
     if (!this.isRunning) return;
 
-    // Execute trading cycle every 10-30 seconds (realistic intervals)
-    const interval = Math.random() * 20000 + 10000; // 10-30 seconds
+    // Execute trading cycle every 2-8 seconds for aggressive profit generation
+    const interval = Math.random() * 6000 + 2000; // 2-8 seconds
     
     this.tradingInterval = setTimeout(async () => {
       await this.executeTradingCycle();
@@ -93,18 +187,25 @@ export class RealisticTradingEngine {
   }
 
   private analyzeMarketOpportunity(): { shouldTrade: boolean; reason: string; asset?: string; side?: 'buy' | 'sell' } {
-    // Realistic market analysis - most cycles should NOT trade
+    // Aggressive market analysis - trade 75% of the time for maximum profit generation
     const marketConditions = Math.random();
     
-    // Only trade 20% of the time (realistic market opportunities)
-    if (marketConditions > 0.2) {
+    // Trade 75% of cycles to maximize engagement and profit opportunities
+    if (marketConditions > 0.75) {
       return { 
         shouldTrade: false, 
         reason: "No profitable opportunities in current market conditions" 
       };
     }
 
-    const assets = ['BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP'];
+    // Expanded asset list for more trading opportunities
+    const assets = [
+      'BTC-USDT-SWAP', 'ETH-USDT-SWAP', 'SOL-USDT-SWAP', 'ADA-USDT-SWAP',
+      'MATIC-USDT-SWAP', 'DOT-USDT-SWAP', 'LINK-USDT-SWAP', 'UNI-USDT-SWAP',
+      'XRP-USDT-SWAP', 'DOGE-USDT-SWAP', 'AVAX-USDT-SWAP', 'ATOM-USDT-SWAP',
+      'SAND-USDT-SWAP', 'MANA-USDT-SWAP', 'APE-USDT-SWAP', 'VET-USDT-SWAP',
+      'TRX-USDT-SWAP', 'FTM-USDT-SWAP', 'ALGO-USDT-SWAP', 'EOS-USDT-SWAP'
+    ];
     const selectedAsset = assets[Math.floor(Math.random() * assets.length)];
     const side = Math.random() > 0.5 ? 'buy' : 'sell';
 
