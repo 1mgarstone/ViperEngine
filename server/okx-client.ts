@@ -67,7 +67,7 @@ export class OKXClient {
 
   private getHeaders(method: string, requestPath: string, body: string = '') {
     const timestamp = Date.now() / 1000;
-    const timestampStr = timestamp.toFixed(3); // OKX requires 3 decimal places
+    const timestampStr = timestamp.toString();
     const signature = this.createSignature(timestampStr, method, requestPath, body);
 
     return {

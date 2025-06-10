@@ -205,6 +205,25 @@ export class ViperEngine {
       avgPnL: completedTrades.length > 0 ? totalPnL / completedTrades.length : 0
     };
   }
+
+  async processAutomatedTradingCycle(): Promise<void> {
+    // DISABLED: No automated artificial profit generation
+    // All trading now handled by realistic trading engine
+    this.autoTradingState.cycleCount++;
+    this.autoTradingState.lastExecution = Date.now();
+  }
+
+  updateMicroTradeSettings(enabled: boolean, intensity: number): void {
+    // Placeholder for compatibility
+  }
+
+  getMicroTradeStatus(): { enabled: boolean; intensity: number; activeTrades: number } {
+    return { enabled: false, intensity: 0, activeTrades: 0 };
+  }
+
+  restartSystematicProgression(): void {
+    // Placeholder for compatibility
+  }
 }
 
 // Global engine instance
