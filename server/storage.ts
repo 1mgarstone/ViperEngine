@@ -127,7 +127,7 @@ export class MemStorage implements IStorage {
         id: 1,
         username: "demo_trader",
         email: "demo@tradinglab.com",
-        paperBalance: "10.00000000",
+        paperBalance: "1000.00000000",
         liveBalance: "0.00000000",
         isLiveMode: false,
         apiKey: null,

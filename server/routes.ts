@@ -809,5 +809,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user balance endpoint
+  app.put("/api/user/:userId/balance", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { balance } = req.body;
+      
+      if (!balance || isNaN(parseFloat(balance))) {
+        return res.status(400).json({ error: "Invalid balance amount" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Update paper balance (demo balance)
+      const updatedUser = await storage.updateUserBalance(userId, balance);
+      
+      res.json({
+        success: true,
+        message: `Balance updated to $${balance}`,
+        balance: updatedUser.paperBalance
+      });
+    } catch (error: any) {
+      console.error("Failed to update balance:", error.message);
+      res.status(500).json({ error: "Failed to update balance" });
+    }
+  });
+
   return httpServer;
 }
