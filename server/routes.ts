@@ -763,7 +763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         exchangeName: isLive ? "OKX" : null,
         isLiveMode: updatedUser.isLiveMode,
         balance: isLive ? updatedUser.liveBalance : updatedUser.paperBalance,
-        balanceSource: isLive ? "OKX Live Account" : "Demo Simulation"
+        balanceSource: isLive ? "OKX Live Account" : "Training Mode"
       });
     } catch (error: any) {
       console.error("Failed to toggle live mode:", error.message);

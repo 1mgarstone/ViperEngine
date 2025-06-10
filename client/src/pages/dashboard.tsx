@@ -216,7 +216,7 @@ export default function Dashboard() {
                     </div>
                     <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)} USDT</div>
                     <div className="text-xs text-orange-200">
-                      {userData?.isLiveMode ? 'OKX Live Account' : 'Demo Simulation'}
+                      {userData?.isLiveMode ? 'OKX Live Account' : 'Training Mode'}
                     </div>
                     {totalProfit !== 0 && (
                       <div className={`text-xs font-medium ${totalProfit > 0 ? 'text-green-300' : 'text-red-300'}`}>
