@@ -60,14 +60,23 @@ export class OKXClient {
   }
 
   private createSignature(timestamp: string, method: string, requestPath: string, body: string = ''): string {
-    // OKX API signature format: timestamp + method + requestPath + body
-    const message = timestamp + method + requestPath + body;
-    return crypto.createHmac('sha256', this.secretKey).update(message).digest('base64');
+    // OKX API signature format: timestamp + method.toUpperCase() + requestPath + body
+    const message = timestamp + method.toUpperCase() + requestPath + body;
+    const signature = crypto.createHmac('sha256', this.secretKey).update(message, 'utf8').digest('base64');
+    console.log('OKX Signature Debug:', {
+      timestamp,
+      method: method.toUpperCase(),
+      requestPath,
+      body,
+      message,
+      signature: signature.substring(0, 10) + '...'
+    });
+    return signature;
   }
 
   private getHeaders(method: string, requestPath: string, body: string = '') {
-    // OKX requires ISO timestamp format
-    const timestamp = new Date().toISOString();
+    // OKX requires Unix timestamp in seconds with milliseconds as decimal
+    const timestamp = (Date.now() / 1000).toFixed(3);
     const signature = this.createSignature(timestamp, method, requestPath, body);
 
     return {
@@ -83,17 +92,31 @@ export class OKXClient {
     try {
       const requestPath = '/api/v5/account/balance';
       const headers = this.getHeaders('GET', requestPath);
+      
+      console.log('OKX API Request Details:', {
+        url: `${this.baseUrl}${requestPath}`,
+        headers: {
+          'OK-ACCESS-KEY': headers['OK-ACCESS-KEY'].substring(0, 8) + '...',
+          'OK-ACCESS-TIMESTAMP': headers['OK-ACCESS-TIMESTAMP'],
+          'OK-ACCESS-PASSPHRASE': headers['OK-ACCESS-PASSPHRASE'].substring(0, 4) + '...',
+          'OK-ACCESS-SIGN': headers['OK-ACCESS-SIGN'].substring(0, 10) + '...'
+        }
+      });
 
       const response = await fetch(`${this.baseUrl}${requestPath}`, {
         method: 'GET',
         headers,
       });
 
+      const responseText = await response.text();
+      console.log('OKX API Response Status:', response.status);
+      console.log('OKX API Response Text:', responseText.substring(0, 300));
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${responseText}`);
       }
 
-      const data: OKXAccountResponse = await response.json();
+      const data: OKXAccountResponse = JSON.parse(responseText);
 
       if (data.code !== '0') {
         return {
