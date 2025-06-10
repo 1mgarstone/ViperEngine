@@ -77,6 +77,12 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     refetchInterval: 2000,
   });
 
+  // Fetch user data for Demo/Live mode toggle
+  const { data: userData } = useQuery({
+    queryKey: [`/api/user/${userId}`],
+    refetchInterval: 5000,
+  });
+
   // Fetch VIPER autonomous status
   const { data: viperStatus } = useQuery<ViperStatus>({
     queryKey: ["/api/viper-status"],
@@ -91,29 +97,30 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
 
   // Update form when settings data loads
   useEffect(() => {
-    if (settingsData) {
-      setIsEnabled(settingsData.isEnabled || false);
-      setMaxLeverage([settingsData.maxLeverage || 125]);
-      setProfitTarget(settingsData.profitTarget || "3.50");
-      setStopLoss(settingsData.stopLoss || "0.80");
-      setMaxTrades([settingsData.maxConcurrentTrades || 5]);
-      setBalanceMultiplier(settingsData.balanceMultiplier || "3.00");
+    if (settingsData && typeof settingsData === 'object') {
+      setIsEnabled((settingsData as any).isEnabled || false);
+      setMaxLeverage([(settingsData as any).maxLeverage || 125]);
+      setProfitTarget((settingsData as any).profitTarget || "3.50");
+      setStopLoss((settingsData as any).stopLoss || "0.80");
+      setMaxTrades([(settingsData as any).maxConcurrentTrades || 5]);
+      setBalanceMultiplier((settingsData as any).balanceMultiplier || "3.00");
     }
   }, [settingsData]);
 
   // Update micro-trade form when status loads
   useEffect(() => {
-    if (microTradeStatus) {
-      setIsMicroTradeEnabled(microTradeStatus.enabled);
-      setMicroTradeIntensity([microTradeStatus.intensity || 3]);
+    if (microTradeStatus && typeof microTradeStatus === 'object') {
+      setIsMicroTradeEnabled((microTradeStatus as any).enabled);
+      setMicroTradeIntensity([(microTradeStatus as any).intensity || 3]);
     }
   }, [microTradeStatus]);
 
   // Update settings mutation
   const updateSettingsMutation = useMutation({
     mutationFn: async (settings: any) => {
-      return apiRequest("/api/viper-settings", {
+      const response = await fetch("/api/viper-settings", {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
           maxLeverage: maxLeverage[0],
@@ -128,6 +135,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
           isEnabled,
         }),
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/viper-settings/${userId}`] });
@@ -175,9 +183,11 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   // Start/Stop autonomous trading
   const controlTradingMutation = useMutation({
     mutationFn: async (action: "start" | "stop") => {
-      return apiRequest(`/api/viper-control/${action}`, {
+      const response = await fetch(`/api/viper-control/${action}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" }
       });
+      return response.json();
     },
     onSuccess: (data: any, action) => {
       queryClient.invalidateQueries({ queryKey: ["/api/viper-status"] });
@@ -192,7 +202,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   // Toggle Demo/Live trading mode
   const toggleLiveModeMutation = useMutation({
     mutationFn: async () => {
-      const newMode = !userData?.isLiveMode;
+      const newMode = !(userData as any)?.isLiveMode;
       return await fetch(`/api/user/${userId}/toggle-live-mode`, {
         method: "POST",
         body: JSON.stringify({ isLive: newMode }),
@@ -317,13 +327,13 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
             <div className="p-4 bg-gray-700/50 border border-gray-600 rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className={`w-3 h-3 rounded-full ${userData?.isLiveMode ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                  <div className={`w-3 h-3 rounded-full ${(userData as any)?.isLiveMode ? 'bg-red-500' : 'bg-blue-400'}`}></div>
                   <div>
                     <div className="text-white font-medium">
-                      {userData?.isLiveMode ? 'LIVE Trading Mode' : 'Demo Trading Mode'}
+                      {(userData as any)?.isLiveMode ? 'LIVE Trading Mode' : 'Demo Trading Mode'}
                     </div>
                     <div className="text-sm text-gray-300">
-                      {userData?.isLiveMode 
+                      {(userData as any)?.isLiveMode 
                         ? 'Trading with real USDT on OKX exchange' 
                         : 'Systematic progression with realistic market simulation'
                       }
@@ -333,12 +343,12 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
                 <Button
                   onClick={() => handleToggleLiveMode()}
                   disabled={toggleLiveModeMutation.isPending}
-                  className={`${userData?.isLiveMode 
+                  className={`${(userData as any)?.isLiveMode 
                     ? 'bg-blue-600 hover:bg-blue-700' 
                     : 'bg-red-600 hover:bg-red-700'
                   } text-white font-bold px-4 py-2`}
                 >
-                  Switch to {userData?.isLiveMode ? 'DEMO' : 'LIVE'}
+                  Switch to {(userData as any)?.isLiveMode ? 'DEMO' : 'LIVE'}
                 </Button>
               </div>
             </div>
