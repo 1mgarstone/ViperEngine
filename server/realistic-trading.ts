@@ -90,8 +90,8 @@ export class RealisticTradingEngine {
 
       const currentBalance = parseFloat(user.isLiveMode ? user.liveBalance : user.paperBalance);
       
-      // Aggressive market analysis for parallel streams - 90% trade rate
-      const shouldTrade = Math.random() > 0.1;
+      // Reduced parallel trading to avoid interference with optimized VIPER strategy
+      const shouldTrade = Math.random() > 0.8; // Only 20% trade rate
       if (!shouldTrade) return;
 
       // Different asset pools for each stream to avoid conflicts
