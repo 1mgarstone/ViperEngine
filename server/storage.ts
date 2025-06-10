@@ -247,6 +247,22 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
+  async updateUserExchangeCredentials(userId: number, apiKey: string, secretKey: string, passphrase: string, exchangeName: string): Promise<User> {
+    const user = this.users.get(userId);
+    if (!user) throw new Error("User not found");
+    
+    const updatedUser = { 
+      ...user, 
+      apiKey,
+      apiSecret: secretKey,
+      apiPassphrase: passphrase,
+      exchangeName,
+      updatedAt: new Date()
+    };
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
   // Asset operations
   async getAllAssets(): Promise<Asset[]> {
     return Array.from(this.assets.values());
@@ -566,7 +582,12 @@ export class MemStorage implements IStorage {
   async createWidget(insertWidget: InsertDashboardWidget): Promise<DashboardWidget> {
     const widget: DashboardWidget = {
       id: this.currentWidgetId++,
-      ...insertWidget,
+      userId: insertWidget.userId,
+      widgetType: insertWidget.widgetType,
+      size: insertWidget.size || "medium",
+      position: insertWidget.position || 0,
+      isVisible: insertWidget.isVisible !== undefined ? insertWidget.isVisible : true,
+      config: insertWidget.config || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

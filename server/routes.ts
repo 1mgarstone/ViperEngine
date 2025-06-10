@@ -644,5 +644,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update user exchange credentials
+  app.post("/api/user/:userId/exchange-credentials", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      // Update user with OKX API credentials from environment
+      const updatedUser = await storage.updateUserExchangeCredentials(
+        userId,
+        process.env.OKX_API_KEY || "",
+        process.env.OKX_SECRET_KEY || "",
+        process.env.OKX_PASSPHRASE || "",
+        "okx"
+      );
+
+      res.json({
+        success: true,
+        message: "Exchange credentials updated successfully",
+        exchangeName: "OKX",
+        hasCredentials: !!(process.env.OKX_API_KEY && process.env.OKX_SECRET_KEY && process.env.OKX_PASSPHRASE)
+      });
+    } catch (error) {
+      console.error("Failed to update exchange credentials:", error);
+      res.status(500).json({ error: "Failed to update exchange credentials" });
+    }
+  });
+
   return httpServer;
 }

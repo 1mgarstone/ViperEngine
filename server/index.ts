@@ -38,6 +38,23 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Initialize OKX API credentials for live trading
+  try {
+    const { storage } = await import("./storage");
+    if (process.env.OKX_API_KEY && process.env.OKX_SECRET_KEY && process.env.OKX_PASSPHRASE) {
+      await storage.updateUserExchangeCredentials(
+        1, // Default user ID
+        process.env.OKX_API_KEY,
+        process.env.OKX_SECRET_KEY,
+        process.env.OKX_PASSPHRASE,
+        "okx"
+      );
+      console.log("✅ OKX API credentials configured for live trading");
+    }
+  } catch (error) {
+    console.log("⚠️ OKX credentials not configured:", error.message);
+  }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
