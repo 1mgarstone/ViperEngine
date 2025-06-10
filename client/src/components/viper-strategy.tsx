@@ -282,15 +282,34 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Trading Mode Control - Demo Mode Only */}
+          {/* Trading Mode Control - Demo/Live Switch */}
           <div className="mb-6">
             <div className="p-4 bg-gray-700/50 border border-gray-600 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                <div>
-                  <div className="text-white font-medium">Demo Trading Mode</div>
-                  <div className="text-sm text-gray-300">Systematic progression with realistic market simulation</div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${userData?.isLiveMode ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                  <div>
+                    <div className="text-white font-medium">
+                      {userData?.isLiveMode ? 'LIVE Trading Mode' : 'Demo Trading Mode'}
+                    </div>
+                    <div className="text-sm text-gray-300">
+                      {userData?.isLiveMode 
+                        ? 'Trading with real USDT on OKX exchange' 
+                        : 'Systematic progression with realistic market simulation'
+                      }
+                    </div>
+                  </div>
                 </div>
+                <Button
+                  onClick={() => handleToggleLiveMode()}
+                  disabled={toggleLiveModeMutation.isPending}
+                  className={`${userData?.isLiveMode 
+                    ? 'bg-blue-600 hover:bg-blue-700' 
+                    : 'bg-red-600 hover:bg-red-700'
+                  } text-white font-bold px-4 py-2`}
+                >
+                  Switch to {userData?.isLiveMode ? 'DEMO' : 'LIVE'}
+                </Button>
               </div>
             </div>
           </div>
