@@ -702,50 +702,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
         </CardContent>
       </Card>
 
-      {/* Market Overview */}
-      <Card className="bg-gray-800 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-white flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5 text-blue-400" />
-            <span>Market Overview</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {assetsData && Array.isArray(assetsData) && assetsData.map((asset: any) => {
-              const livePrice = livePrices[asset.symbol];
-              const currentPrice = livePrice ? livePrice.price : parseFloat(asset.price);
-              const currentChange = livePrice ? livePrice.change : parseFloat(asset.change24h);
-              
-              return (
-                <div key={asset.id} className="bg-gray-700/50 rounded-lg p-3 relative">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-white font-medium">{asset.symbol}</span>
-                    <div className="flex items-center space-x-1">
-                      {livePrice && (
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                      )}
-                      <span className={`text-sm px-2 py-1 rounded ${
-                        currentChange >= 0 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {currentChange >= 0 ? '+' : ''}{currentChange.toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-gray-300 text-lg font-mono">
-                    ${currentPrice.toFixed(2)}
-                  </div>
-                  {livePrice && (
-                    <div className="text-xs text-green-400 mt-1">LIVE</div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Liquidation Scanner */}
       <Card className="bg-gray-800 border-gray-700">
