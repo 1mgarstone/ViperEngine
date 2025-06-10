@@ -10,7 +10,7 @@ interface OKXBalance {
 interface OKXAccountResponse {
   code: string;
   msg: string;
-  data: OKXBalance[];
+  data: any[];
 }
 
 interface OKXOrder {
@@ -126,15 +126,29 @@ export class OKXClient {
         };
       }
 
-      // Find USDT balance
-      const usdtBalance = data.data.find(balance => balance.ccy === 'USDT');
-      const availableBalance = usdtBalance ? parseFloat(usdtBalance.availBal) : 0;
+      // Parse the complete response structure
+      console.log('Complete OKX Balance Response:', JSON.stringify(data, null, 2));
+      
+      let totalUsdtBalance = 0;
+      
+      // Check if data has details array (funding account structure)
+      if (data.data && data.data.length > 0 && data.data[0].details) {
+        const details = data.data[0].details;
+        const usdtDetail = details.find((detail: any) => detail.ccy === 'USDT');
+        if (usdtDetail) {
+          totalUsdtBalance = parseFloat(usdtDetail.availBal || usdtDetail.cashBal || '0');
+        }
+      } else {
+        // Standard account balance structure
+        const usdtBalance = data.data.find(balance => balance.ccy === 'USDT');
+        totalUsdtBalance = usdtBalance ? parseFloat(usdtBalance.availBal || usdtBalance.bal || '0') : 0;
+      }
 
-      console.log(`OKX Live Balance: ${availableBalance} USDT`);
+      console.log(`OKX Live Balance: ${totalUsdtBalance} USDT`);
 
       return {
         success: true,
-        usdtBalance: availableBalance
+        usdtBalance: totalUsdtBalance
       };
 
     } catch (error) {

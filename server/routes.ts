@@ -629,11 +629,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingSettings = await storage.getViperSettings(userId);
       if (existingSettings) {
         await storage.updateViperSettings(userId, {
+          userId: userId,
           isEnabled: false,
-          maxLeverage: "50",
+          maxLeverage: 50,
           profitTarget: "2.0",
           stopLoss: "1.0",
-          maxConcurrentTrades: "1",
+          maxConcurrentTrades: 1,
           balanceMultiplier: "3.0",
           positionScaling: "1.0"
         });
