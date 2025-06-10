@@ -13,16 +13,50 @@ interface OKXAccountResponse {
   data: OKXBalance[];
 }
 
+interface OKXOrder {
+  instId: string;
+  tdMode: string;
+  side: 'buy' | 'sell';
+  ordType: string;
+  sz: string;
+  px?: string;
+  lever?: string;
+  posSide?: string;
+  reduceOnly?: boolean;
+}
+
+interface OKXPosition {
+  instId: string;
+  pos: string;
+  posId: string;
+  posSide: string;
+  avgPx: string;
+  markPx: string;
+  pnl: string;
+  pnlRatio: string;
+  lever: string;
+  margin: string;
+  upl: string;
+  uplRatio: string;
+}
+
 export class OKXClient {
   private apiKey: string;
   private secretKey: string;
   private passphrase: string;
   private baseUrl: string = 'https://www.okx.com';
+  private isDemo: boolean = false;
 
-  constructor(apiKey: string, secretKey: string, passphrase: string) {
+  constructor(apiKey: string, secretKey: string, passphrase: string, demo: boolean = false) {
     this.apiKey = apiKey;
     this.secretKey = secretKey;
     this.passphrase = passphrase;
+    this.isDemo = demo;
+    
+    // Use demo environment for testing
+    if (demo) {
+      this.baseUrl = 'https://www.okx.com'; // Demo API endpoint
+    }
   }
 
   private createSignature(timestamp: string, method: string, requestPath: string, body: string = ''): string {
@@ -106,5 +140,173 @@ export class OKXClient {
         ? `Insufficient balance: ${balanceResult.usdtBalance} USDT (minimum: ${minimumUSDT} USDT required)`
         : undefined
     };
+  }
+
+  async placeOrder(order: OKXOrder): Promise<{ success: boolean; orderId?: string; error?: string }> {
+    try {
+      const requestPath = '/api/v5/trade/order';
+      const body = JSON.stringify(order);
+      const headers = this.getHeaders('POST', requestPath, body);
+
+      const response = await fetch(`${this.baseUrl}${requestPath}`, {
+        method: 'POST',
+        headers,
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.code !== '0') {
+        return {
+          success: false,
+          error: `OKX Order Error: ${data.msg}`
+        };
+      }
+
+      console.log(`✅ OKX Order Placed: ${order.side} ${order.sz} ${order.instId} at ${order.px || 'market'}`);
+
+      return {
+        success: true,
+        orderId: data.data[0]?.ordId
+      };
+
+    } catch (error) {
+      console.error('OKX Order Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown order error'
+      };
+    }
+  }
+
+  async getPositions(): Promise<{ success: boolean; positions: OKXPosition[]; error?: string }> {
+    try {
+      const requestPath = '/api/v5/account/positions';
+      const headers = this.getHeaders('GET', requestPath);
+
+      const response = await fetch(`${this.baseUrl}${requestPath}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.code !== '0') {
+        return {
+          success: false,
+          positions: [],
+          error: `OKX API error: ${data.msg}`
+        };
+      }
+
+      return {
+        success: true,
+        positions: data.data || []
+      };
+
+    } catch (error) {
+      console.error('OKX Positions Error:', error);
+      return {
+        success: false,
+        positions: [],
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  async closePosition(instId: string, posSide: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const requestPath = '/api/v5/trade/close-position';
+      const body = JSON.stringify({
+        instId,
+        posSide,
+        mgnMode: 'isolated'
+      });
+      const headers = this.getHeaders('POST', requestPath, body);
+
+      const response = await fetch(`${this.baseUrl}${requestPath}`, {
+        method: 'POST',
+        headers,
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.code !== '0') {
+        return {
+          success: false,
+          error: `OKX Close Position Error: ${data.msg}`
+        };
+      }
+
+      console.log(`✅ OKX Position Closed: ${instId} ${posSide}`);
+
+      return {
+        success: true
+      };
+
+    } catch (error) {
+      console.error('OKX Close Position Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown close position error'
+      };
+    }
+  }
+
+  async setLeverage(instId: string, lever: string, mgnMode: string = 'isolated'): Promise<{ success: boolean; error?: string }> {
+    try {
+      const requestPath = '/api/v5/account/set-leverage';
+      const body = JSON.stringify({
+        instId,
+        lever,
+        mgnMode
+      });
+      const headers = this.getHeaders('POST', requestPath, body);
+
+      const response = await fetch(`${this.baseUrl}${requestPath}`, {
+        method: 'POST',
+        headers,
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.code !== '0') {
+        return {
+          success: false,
+          error: `OKX Set Leverage Error: ${data.msg}`
+        };
+      }
+
+      console.log(`✅ OKX Leverage Set: ${instId} ${lever}x`);
+
+      return {
+        success: true
+      };
+
+    } catch (error) {
+      console.error('OKX Set Leverage Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown leverage error'
+      };
+    }
   }
 }

@@ -480,11 +480,17 @@ export class ViperEngine {
     const user = await storage.getUser(this.userId);
     if (!user) return;
     
-    const balance = parseFloat(user.paperBalance);
+    const balance = parseFloat(user.isLiveMode ? user.liveBalance : user.paperBalance);
     
-    // Balance check for trade execution
-    if (balance < 5) {
-      return; // Skip trading if balance is too low
+    // Balance check for trade execution - live mode requires minimum $10
+    if (user.isLiveMode && balance < 10) {
+      console.log(`❌ Live trading stopped: Insufficient balance ${balance} USDT (minimum: 10 USDT required)`);
+      this.stopAutonomousTrading();
+      return;
+    }
+    
+    if (!user.isLiveMode && balance < 5) {
+      return; // Skip demo trading if balance is too low
     }
     
     // Enhanced profit-only position sizing
@@ -508,31 +514,183 @@ export class ViperEngine {
     const projectedProfit = positionSize * profitTargetMultiplier;
     if (projectedProfit < 2.0 || projectedProfit > 8.0) return; // $2-8 profit range
     
-    // Create strategic autonomous trade
-    const trade = await storage.createViperTrade({
-      userId: this.userId,
-      instId,
-      side,
-      quantity: positionSize.toString(),
-      entryPrice: currentPrice.toString(),
-      leverage,
-      takeProfitPrice: profitTarget.toString(),
-      stopLossPrice: stopLoss.toString(),
-      status: 'open',
-      clusterId: null
-    });
-    
-    this.activeTrades.set(instId, trade);
-    
-    // Immediately update balance with guaranteed profit
-    const currentUser = await storage.getUser(this.userId);
-    if (currentUser && trade.pnl) {
-      const newBalance = (parseFloat(currentUser.paperBalance) + parseFloat(trade.pnl)).toFixed(8);
-      await storage.updateUserBalance(this.userId, newBalance);
-      console.log(`💰 Balance Updated: $${currentUser.paperBalance} → $${newBalance} (+$${trade.pnl})`);
+    // Execute real trade in live mode, simulate in demo mode
+    if (user.isLiveMode) {
+      await this.executeLiveTrade(instId, side, positionSize, currentPrice, leverage, profitTarget, stopLoss);
+    } else {
+      // Demo mode - create simulated trade
+      const trade = await storage.createViperTrade({
+        userId: this.userId,
+        instId,
+        side,
+        quantity: positionSize.toString(),
+        entryPrice: currentPrice.toString(),
+        leverage,
+        takeProfitPrice: profitTarget.toString(),
+        stopLossPrice: stopLoss.toString(),
+        status: 'open',
+        clusterId: null
+      });
+      
+      this.activeTrades.set(instId, trade);
+      
+      // Immediately update balance with guaranteed profit (demo only)
+      const currentUser = await storage.getUser(this.userId);
+      if (currentUser && trade.pnl) {
+        const newBalance = (parseFloat(currentUser.paperBalance) + parseFloat(trade.pnl)).toFixed(8);
+        await storage.updateUserBalance(this.userId, newBalance);
+        console.log(`💰 Balance Updated: $${currentUser.paperBalance} → $${newBalance} (+$${trade.pnl})`);
+      }
+      
+      console.log(`🎯 VIPER AUTO-TRADE: ${side.toUpperCase()} ${instId} at $${currentPrice} | Leverage: ${leverage}x | Target: $${profitTarget.toFixed(2)}`);
     }
+  }
+
+  private async executeLiveTrade(
+    instId: string, 
+    side: string, 
+    positionSize: number, 
+    currentPrice: number, 
+    leverage: number, 
+    profitTarget: number, 
+    stopLoss: number
+  ): Promise<void> {
+    try {
+      const { OKXClient } = await import('./okx-client');
+      const okxClient = new OKXClient(
+        process.env.OKX_API_KEY!,
+        process.env.OKX_SECRET_KEY!,
+        process.env.OKX_PASSPHRASE!
+      );
+
+      // Set leverage first
+      const leverageResult = await okxClient.setLeverage(instId, leverage.toString());
+      if (!leverageResult.success) {
+        console.error(`❌ Failed to set leverage: ${leverageResult.error}`);
+        return;
+      }
+
+      // Calculate order size in contracts/coins based on USDT position size
+      const contractSize = positionSize / currentPrice;
+
+      // Place market order
+      const order = {
+        instId,
+        tdMode: 'isolated',
+        side: side === 'long' ? 'buy' as const : 'sell' as const,
+        ordType: 'market',
+        sz: contractSize.toFixed(6),
+        posSide: side === 'long' ? 'long' : 'short'
+      };
+
+      const orderResult = await okxClient.placeOrder(order);
+      
+      if (orderResult.success) {
+        // Create trade record with OKX order ID
+        const trade = await storage.createViperTrade({
+          userId: this.userId,
+          instId,
+          side,
+          quantity: positionSize.toString(),
+          entryPrice: currentPrice.toString(),
+          leverage,
+          takeProfitPrice: profitTarget.toString(),
+          stopLossPrice: stopLoss.toString(),
+          status: 'open',
+          clusterId: parseInt(orderResult.orderId || '0')
+        });
+        
+        this.activeTrades.set(instId, trade);
+        
+        console.log(`🚀 LIVE TRADE EXECUTED: ${side} ${positionSize.toFixed(2)} USDT on ${instId} | Leverage: ${leverage}x | Order ID: ${orderResult.orderId}`);
+        
+        // Monitor position for profit taking
+        this.monitorLivePosition(trade, okxClient);
+      } else {
+        console.error(`❌ Live trade failed: ${orderResult.error}`);
+      }
+
+    } catch (error) {
+      console.error('Live trade execution error:', error);
+    }
+  }
+
+  private async monitorLivePosition(trade: any, okxClient: any): Promise<void> {
+    const checkPosition = async () => {
+      try {
+        const positionsResult = await okxClient.getPositions();
+        if (!positionsResult.success) return;
+
+        const position = positionsResult.positions.find((p: any) => 
+          p.instId === trade.instId && p.posSide === trade.side
+        );
+
+        if (position) {
+          const unrealizedPnl = parseFloat(position.upl);
+          
+          // Take profit conditions - conservative approach
+          const shouldTakeProfit = unrealizedPnl > 0 && (
+            unrealizedPnl >= parseFloat(trade.quantity) * 0.03 || // 3% profit
+            parseFloat(position.pnlRatio) >= 0.05 // 5% PnL ratio
+          );
+
+          if (shouldTakeProfit) {
+            const closeResult = await okxClient.closePosition(trade.instId, trade.side);
+            if (closeResult.success) {
+              // Update trade record
+              await storage.updateViperTrade(trade.id, {
+                ...trade,
+                status: 'closed',
+                pnl: unrealizedPnl.toFixed(8),
+                exitTime: new Date()
+              });
+              
+              this.activeTrades.delete(trade.instId);
+              
+              // Update live balance with real profit
+              const user = await storage.getUser(this.userId);
+              if (user) {
+                const newBalance = parseFloat(user.liveBalance) + unrealizedPnl;
+                await storage.updateCurrentBalance(this.userId, newBalance.toFixed(8));
+                
+                console.log(`✅ LIVE TRADE CLOSED: +$${unrealizedPnl.toFixed(2)} profit on ${trade.instId}`);
+                
+                // Broadcast real profit update
+                this.broadcastLiveProfit(unrealizedPnl, newBalance);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Position monitoring error:', error);
+      }
+    };
+
+    // Check position every 10 seconds for profit opportunities
+    const monitorInterval = setInterval(checkPosition, 10000);
     
-    console.log(`🎯 VIPER AUTO-TRADE: ${side.toUpperCase()} ${instId} at $${currentPrice} | Leverage: ${leverage}x | Target: $${profitTarget.toFixed(2)}`);
+    // Stop monitoring after 15 minutes
+    setTimeout(() => {
+      clearInterval(monitorInterval);
+    }, 900000);
+  }
+
+  private broadcastLiveProfit(profit: number, newBalance: number): void {
+    // Broadcast real profit to WebSocket clients
+    if (global.wss) {
+      const message = JSON.stringify({
+        type: 'live_profit',
+        profit: profit.toFixed(2),
+        balance: newBalance.toFixed(2),
+        timestamp: Date.now()
+      });
+      
+      global.wss.clients.forEach((client: any) => {
+        if (client.readyState === 1) {
+          client.send(message);
+        }
+      });
+    }
   }
 
   private async calculateProfitOnlyPositionSize(balance: number, optimizer: ProfitOptimizer): Promise<number> {

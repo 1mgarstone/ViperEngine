@@ -171,18 +171,62 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Demo Restart Button */}
+                {/* Live/Demo Mode Toggle */}
                 <div className="mb-4">
-                  <Button 
-                    onClick={() => restartDemo.mutate()}
-                    disabled={restartDemo.isPending}
-                    variant="outline"
-                    size="sm"
-                    className="w-full bg-orange-600/20 border-orange-500 text-orange-100 hover:bg-orange-600/30"
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($10.00 USDT)'}
-                  </Button>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-orange-100 text-sm">Trading Mode</span>
+                    <div className="flex items-center space-x-2">
+                      <span className={`text-xs ${!userData?.isLiveMode ? 'text-orange-300' : 'text-gray-400'}`}>
+                        DEMO
+                      </span>
+                      <button
+                        onClick={() => toggleLiveMode.mutate(!userData?.isLiveMode)}
+                        disabled={toggleLiveMode.isPending}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          userData?.isLiveMode ? 'bg-green-600' : 'bg-gray-600'
+                        } ${toggleLiveMode.isPending ? 'opacity-50' : ''}`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            userData?.isLiveMode ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                      <span className={`text-xs ${userData?.isLiveMode ? 'text-green-300' : 'text-gray-400'}`}>
+                        LIVE
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {toggleLiveMode.error && (
+                    <div className="text-red-400 text-xs mb-2">
+                      {toggleLiveMode.error.message}
+                    </div>
+                  )}
+                  
+                  {userData?.isLiveMode && (
+                    <div className="bg-green-600/20 border border-green-500/30 rounded p-2 mb-2">
+                      <div className="text-green-300 text-xs">
+                        ✓ Live trading with real USDT
+                      </div>
+                      <div className="text-green-200 text-xs">
+                        Balance: {userData.liveBalance} USDT
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!userData?.isLiveMode && (
+                    <Button 
+                      onClick={() => restartDemo.mutate()}
+                      disabled={restartDemo.isPending}
+                      variant="outline"
+                      size="sm"
+                      className="w-full bg-orange-600/20 border-orange-500 text-orange-100 hover:bg-orange-600/30"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($10.00 USDT)'}
+                    </Button>
+                  )}
                 </div>
                 
                 <div className="bg-black/20 rounded-lg p-4 mb-4">
