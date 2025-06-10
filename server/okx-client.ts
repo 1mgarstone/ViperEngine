@@ -65,13 +65,13 @@ export class OKXClient {
   }
 
   private getHeaders(method: string, requestPath: string, body: string = '') {
-    const timestamp = new Date().toISOString();
-    const signature = this.createSignature(timestamp, method, requestPath, body);
+    const timestamp = Date.now() / 1000; // Unix timestamp in seconds
+    const signature = this.createSignature(timestamp.toString(), method, requestPath, body);
 
     return {
       'OK-ACCESS-KEY': this.apiKey,
       'OK-ACCESS-SIGN': signature,
-      'OK-ACCESS-TIMESTAMP': timestamp,
+      'OK-ACCESS-TIMESTAMP': timestamp.toString(),
       'OK-ACCESS-PASSPHRASE': this.passphrase,
       'Content-Type': 'application/json',
     };
