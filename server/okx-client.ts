@@ -126,22 +126,24 @@ export class OKXClient {
         };
       }
 
-      // Parse the complete response structure
-      console.log('Complete OKX Balance Response:', JSON.stringify(data, null, 2));
-      
+      // Parse all possible balance structures
       let totalUsdtBalance = 0;
       
-      // Check if data has details array (funding account structure)
-      if (data.data && data.data.length > 0 && data.data[0].details) {
-        const details = data.data[0].details;
-        const usdtDetail = details.find((detail: any) => detail.ccy === 'USDT');
-        if (usdtDetail) {
-          totalUsdtBalance = parseFloat(usdtDetail.availBal || usdtDetail.cashBal || '0');
+      // Search through all data entries and their details
+      for (const account of data.data) {
+        // Check direct balance structure
+        if (account.ccy === 'USDT') {
+          totalUsdtBalance += parseFloat(account.availBal || account.bal || account.cashBal || '0');
         }
-      } else {
-        // Standard account balance structure
-        const usdtBalance = data.data.find(balance => balance.ccy === 'USDT');
-        totalUsdtBalance = usdtBalance ? parseFloat(usdtBalance.availBal || usdtBalance.bal || '0') : 0;
+        
+        // Check details array structure
+        if (account.details && Array.isArray(account.details)) {
+          for (const detail of account.details) {
+            if (detail.ccy === 'USDT') {
+              totalUsdtBalance += parseFloat(detail.availBal || detail.cashBal || detail.bal || '0');
+            }
+          }
+        }
       }
 
       console.log(`OKX Live Balance: ${totalUsdtBalance} USDT`);
