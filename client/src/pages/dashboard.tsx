@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 import { ViperStrategy } from "@/components/viper-strategy";
 import { useWebSocket } from "@/hooks/use-websocket";
@@ -27,6 +28,7 @@ import {
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Swipe gesture state
   const containerRef = useRef<HTMLDivElement>(null);
