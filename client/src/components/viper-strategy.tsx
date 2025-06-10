@@ -435,7 +435,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
                     <div className="text-sm text-gray-300">
                       {(userTradingData as any)?.isLiveMode 
                         ? 'Trading with real USDT on OKX exchange' 
-                        : 'Systematic Trading Progression: Intelligent micro-trading with automatic VIPER activation at $200 threshold'
+                        : 'Systematic Trading Progression: Intelligent micro-trading with automatic VIPER activation at $50 threshold'
                       }
                     </div>
                   </div>

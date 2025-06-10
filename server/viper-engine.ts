@@ -255,10 +255,10 @@ export class ViperEngine {
         await this.executeIntelligentMicroTrading(currentBalance, false);
         await this.executeNanoTrading(currentBalance, false);
       } else if (currentBalance >= 50 && currentBalance < 100) {
-        // Recovery Plus: Enhanced recovery with wider range
-        console.log(`Recovery Plus: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.10).toFixed(2)} position size`);
+        // Phase 1: VIPER Strike Activation ($50+) - Early VIPER activation
+        console.log(`VIPER Strike Phase 1: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.10).toFixed(2)} position size`);
         await this.executeViperStrikeLiquidation(currentBalance, false);
-        await this.executeRecoveryTrading(currentBalance, false);
+        await this.executeIntelligentMicroTrading(currentBalance, false);
       } else if (currentBalance < 50) {
         console.log(`Recovery mode: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.08).toFixed(2)} position size`);
         await this.executeRecoveryTrading(currentBalance, false);
