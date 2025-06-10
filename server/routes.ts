@@ -659,8 +659,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Update user to live mode and configure credentials if switching to live
       if (isLive) {
+        // Import OKX client for balance validation
+        const { OKXClient } = await import('./okx-client');
+        const okxClient = new OKXClient(
+          process.env.OKX_API_KEY!,
+          process.env.OKX_SECRET_KEY!,
+          process.env.OKX_PASSPHRASE!
+        );
+
+        // Validate minimum balance requirement
+        const balanceValidation = await okxClient.validateMinimumBalance(10);
+        
+        if (!balanceValidation.valid) {
+          return res.status(400).json({
+            error: balanceValidation.error || "Insufficient USDT balance for live trading",
+            currentBalance: balanceValidation.balance,
+            minimumRequired: 10,
+            hasCredentials: true,
+            balanceInsufficient: true
+          });
+        }
+
+        // Update live balance from OKX
+        await storage.updateCurrentBalance(userId, balanceValidation.balance.toFixed(8));
+
+        // Update user credentials
         await storage.updateUserExchangeCredentials(
           userId,
           process.env.OKX_API_KEY!,
@@ -668,6 +692,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           process.env.OKX_PASSPHRASE!,
           "okx"
         );
+
+        console.log(`Live mode enabled with ${balanceValidation.balance} USDT balance`);
       }
 
       // Toggle live mode
@@ -675,15 +701,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        message: isLive ? "Switched to LIVE trading mode with real USDT" : "Switched to DEMO trading mode",
+        message: isLive 
+          ? `Switched to LIVE trading mode with ${updatedUser.liveBalance} USDT` 
+          : "Switched to DEMO trading mode",
         mode: isLive ? "LIVE" : "DEMO",
         exchangeName: isLive ? "OKX" : null,
         isLiveMode: updatedUser.isLiveMode,
-        balance: isLive ? updatedUser.liveBalance : updatedUser.paperBalance
+        balance: isLive ? updatedUser.liveBalance : updatedUser.paperBalance,
+        balanceSource: isLive ? "OKX Live Account" : "Demo Simulation"
       });
     } catch (error: any) {
       console.error("Failed to toggle live mode:", error.message);
-      res.status(500).json({ error: "Failed to toggle trading mode" });
+      res.status(500).json({ 
+        error: "Failed to toggle trading mode",
+        details: error.message 
+      });
     }
   });
 

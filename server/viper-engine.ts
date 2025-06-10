@@ -334,11 +334,32 @@ export class ViperEngine {
   }
 
   // Autonomous trading system controls
-  startAutonomousTrading(): void {
+  async startAutonomousTrading(): Promise<void> {
     if (this.autoTradingState.isRunning) return;
     
+    // Check balance requirements before starting
+    const user = await storage.getUser(this.userId);
+    if (!user) {
+      console.log('❌ Cannot start trading: User not found');
+      return;
+    }
+
+    const currentBalance = parseFloat(user.isLiveMode ? user.liveBalance : user.paperBalance);
+    
+    // Minimum balance validation for live trading
+    if (user.isLiveMode && currentBalance < 10.00) {
+      console.log(`❌ Cannot start live trading: Insufficient balance ${currentBalance} USDT (minimum: 10.00 USDT required)`);
+      return;
+    }
+
+    // Minimum balance validation for demo trading  
+    if (!user.isLiveMode && currentBalance < 5.00) {
+      console.log(`❌ Cannot start demo trading: Insufficient balance ${currentBalance} USDT (minimum: 5.00 USDT required)`);
+      return;
+    }
+    
     this.autoTradingState.isRunning = true;
-    console.log('🚀 VIPER Autonomous Trading: STARTED');
+    console.log(`🚀 VIPER Autonomous Trading: STARTED (${user.isLiveMode ? 'LIVE' : 'DEMO'} mode with ${currentBalance.toFixed(2)} USDT)`);
     this.runTradingCycle();
   }
 
