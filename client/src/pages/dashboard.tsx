@@ -270,52 +270,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            {/* Performance Metrics */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg flex items-center space-x-2">
-                  <TrendingUp className="h-5 w-5 text-green-400" />
-                  <span>Performance</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-400">Active Positions</div>
-                    <div className="font-mono text-lg text-white">{activeViperTrades}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-400">Success Rate</div>
-                    <div className="font-mono text-lg text-blue-400">
-                      {((viperStatus?.successRate || 0) * 100).toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Market Overview */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white text-lg flex items-center space-x-2">
-                  <Activity className="h-5 w-5 text-purple-400" />
-                  <span>Live Market Data</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <MarketData 
-                  marketData={marketData || []}
-                />
-              </CardContent>
-            </Card>
 
-            {/* Quick Start Guide */}
-            <Alert className="border-blue-500 bg-blue-500/10 mb-20">
-              <Zap className="h-4 w-4 text-blue-400" />
-              <AlertDescription className="text-gray-300 text-sm">
-                <strong>Systematic Trading:</strong> The platform automatically progresses from micro-trading to advanced VIPER strategies as your balance grows.
-              </AlertDescription>
-            </Alert>
+
           </div>
         );
 
