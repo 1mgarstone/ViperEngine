@@ -80,13 +80,13 @@ export default function Dashboard() {
   // Use live balance from WebSocket for instant updates, fallback to database value
   // Choose correct balance based on user's live/demo mode
   const dbBalance = userData?.isLiveMode 
-    ? parseFloat(userData?.liveBalance || "10.00")
-    : parseFloat(userData?.paperBalance || "10.00");
+    ? parseFloat(userData?.liveBalance || "100.00")
+    : parseFloat(userData?.paperBalance || "100.00");
   const currentBalance = liveBalance || dbBalance;
   
-  // Calculate total profits since starting at $10.00
-  const totalProfit = currentBalance - 10;
-  const profitPercentage = totalProfit > 0 ? ((currentBalance - 10) / 10) * 100 : 0;
+  // Calculate total profits since starting at $100.00
+  const totalProfit = currentBalance - 100;
+  const profitPercentage = totalProfit !== 0 ? ((currentBalance - 100) / 100) * 100 : 0;
 
   // Demo restart mutation
   const restartDemo = useMutation({
