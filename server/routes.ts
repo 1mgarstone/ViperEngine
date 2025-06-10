@@ -85,9 +85,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ws.send(JSON.stringify({
               type: 'balance_update',
               data: {
-                balance: currentBalance,
+                userId: 1,
+                newBalance: currentBalance,
                 profit: currentBalance - 100,
-                profitPercentage: ((currentBalance - 100) / 100) * 100
+                profitPercentage: ((currentBalance - 100) / 100) * 100,
+                trade: 'VIPER Strike'
               }
             }));
           }

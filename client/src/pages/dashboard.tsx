@@ -82,7 +82,7 @@ export default function Dashboard() {
   const dbBalance = userData?.isLiveMode 
     ? parseFloat(userData?.liveBalance || "100.00")
     : parseFloat(userData?.paperBalance || "100.00");
-  const currentBalance = liveBalance || dbBalance;
+  const currentBalance = liveBalance !== null ? liveBalance : dbBalance;
   
   // Calculate total profits since starting at $100.00
   const totalProfit = currentBalance - 100;
