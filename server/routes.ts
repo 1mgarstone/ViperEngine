@@ -667,7 +667,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/user/:userId/toggle-live-mode", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
-      const { isLive } = req.body;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const isLive = !user.isLiveMode; // Toggle current mode
 
       // Check if OKX credentials are configured for live mode
       if (isLive && (!process.env.OKX_API_KEY || !process.env.OKX_SECRET_KEY || !process.env.OKX_PASSPHRASE)) {
