@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign } from "lucide-react";
+import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign, RotateCcw, Scan, Eye } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,6 +48,23 @@ interface ViperStatus {
 export function ViperStrategy({ userId }: ViperStrategyProps) {
   const { toast } = useToast();
   
+  // Add user data query for live/demo mode  
+  const { data: userTradingData } = useQuery({
+    queryKey: [`/api/user/${userId}`],
+    refetchInterval: 2000,
+  });
+  
+  // Add portfolio and market data queries
+  const { data: portfolioData } = useQuery({
+    queryKey: [`/api/portfolio/${userId}`],
+    refetchInterval: 3000,
+  });
+  
+  const { data: assetsData } = useQuery({
+    queryKey: ['/api/assets'],
+    refetchInterval: 5000,
+  });
+  
   // State for form inputs
   const [isEnabled, setIsEnabled] = useState(false);
   const [maxLeverage, setMaxLeverage] = useState([125]);
@@ -77,12 +94,6 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     refetchInterval: 2000,
   });
 
-  // Fetch user data for Demo/Live mode toggle
-  const { data: userData } = useQuery({
-    queryKey: [`/api/user/${userId}`],
-    refetchInterval: 5000,
-  });
-
   // Fetch VIPER autonomous status
   const { data: viperStatus } = useQuery<ViperStatus>({
     queryKey: ["/api/viper-status"],
@@ -94,6 +105,48 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     queryKey: ["/api/micro-trade/status"],
     refetchInterval: 2000,
   });
+
+  // Live/Demo mode toggle mutation
+  const toggleLiveMode = useMutation({
+    mutationFn: async (isLive: boolean) => 
+      apiRequest(`/api/user/${userId}/toggle-live-mode`, {
+        method: 'POST',
+        body: { isLive }
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
+      toast({ description: "Trading mode updated successfully" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        description: error.message || "Failed to switch trading mode",
+        variant: "destructive" 
+      });
+    }
+  });
+
+  // Demo restart mutation
+  const restartDemo = useMutation({
+    mutationFn: () => apiRequest('/api/restart-demo', { method: 'POST' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
+      toast({ description: "Demo restarted with $10.00 USDT" });
+    },
+    onError: () => {
+      toast({ 
+        description: "Failed to restart demo",
+        variant: "destructive" 
+      });
+    }
+  });
+
+  // Calculate current balance and profit
+  const currentBalance = userTradingData?.isLiveMode 
+    ? parseFloat(userTradingData.liveBalance) 
+    : parseFloat(userTradingData?.paperBalance || '0');
+  const startBalance = userTradingData?.isLiveMode ? 10 : 10;
+  const totalProfit = currentBalance - startBalance;
+  const profitPercentage = startBalance > 0 ? (totalProfit / startBalance) * 100 : 0;
 
   // Update form when settings data loads
   useEffect(() => {
@@ -202,7 +255,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   // Toggle Demo/Live trading mode
   const toggleLiveModeMutation = useMutation({
     mutationFn: async () => {
-      const newMode = !(userData as any)?.isLiveMode;
+      const newMode = !(userTradingData as any)?.isLiveMode;
       return await fetch(`/api/user/${userId}/toggle-live-mode`, {
         method: "POST",
         body: JSON.stringify({ isLive: newMode }),
