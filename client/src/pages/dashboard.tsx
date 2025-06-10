@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MarketData } from "@/components/market-data";
+
 import { ViperStrategy } from "@/components/viper-strategy";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { 
