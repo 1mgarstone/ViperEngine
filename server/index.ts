@@ -42,9 +42,9 @@ app.use((req, res, next) => {
   // Initialize OKX API credentials for live trading
   try {
     // Set environment variables with the provided credentials
-    process.env.OKX_API_KEY = "28e69e1b-afca-42d8-929b-0620bfca8f0d";
-    process.env.OKX_SECRET_KEY = "8C6E7C310C14936F1C910CA518FA840F";
-    process.env.OKX_PASSPHRASE = "1%Viperstrike";
+    process.env.OKX_API_KEY = "f37ca250-5afa-46bb-9972-881ad26319f8";
+    process.env.OKX_SECRET_KEY = "893C46BC0D810BB1806C4997F5DC15AD";
+    process.env.OKX_PASSPHRASE = "Viperstrike1x$";
     
     const { storage } = await import("./storage");
     await storage.updateUserExchangeCredentials(

@@ -341,12 +341,11 @@ export class ViperEngine {
       instId: opportunity.asset,
       side: opportunity.side === 'buy' ? 'long' : 'short',
       entryPrice: "2800.00", // Would be real market price
-      size: (positionSize / 2800).toFixed(6),
+      quantity: (positionSize / 2800).toFixed(6),
       leverage: 2, // Conservative leverage for micro-trading
       status: 'pending',
-      entryTime: new Date(),
-      targetPrice: opportunity.side === 'buy' ? "2828.00" : "2772.00", // 1% target
-      stopLoss: opportunity.side === 'buy' ? "2772.00" : "2828.00" // 1% stop
+      takeProfitPrice: opportunity.side === 'buy' ? "2828.00" : "2772.00", // 1% target
+      stopLossPrice: opportunity.side === 'buy' ? "2772.00" : "2828.00" // 1% stop
     });
   }
 
@@ -363,14 +362,13 @@ export class ViperEngine {
       instId: cluster.instId,
       side: cluster.priceDirection === 'up' ? 'long' : 'short',
       entryPrice: cluster.liquidationLevel,
-      size: (positionSize / parseFloat(cluster.liquidationLevel)).toFixed(6),
+      quantity: (positionSize / parseFloat(cluster.liquidationLevel)).toFixed(6),
       leverage: 5, // Moderate leverage for VIPER strikes
       status: 'pending',
-      entryTime: new Date(),
-      targetPrice: cluster.priceDirection === 'up' 
+      takeProfitPrice: cluster.priceDirection === 'up' 
         ? (parseFloat(cluster.liquidationLevel) * 1.03).toFixed(2)
         : (parseFloat(cluster.liquidationLevel) * 0.97).toFixed(2),
-      stopLoss: cluster.priceDirection === 'up'
+      stopLossPrice: cluster.priceDirection === 'up'
         ? (parseFloat(cluster.liquidationLevel) * 0.98).toFixed(2)
         : (parseFloat(cluster.liquidationLevel) * 1.02).toFixed(2)
     });
