@@ -60,18 +60,20 @@ export class OKXClient {
   }
 
   private createSignature(timestamp: string, method: string, requestPath: string, body: string = ''): string {
-    const message = timestamp + method + requestPath + body;
+    // OKX signature format: timestamp + method.toUpperCase() + requestPath + body
+    const message = timestamp + method.toUpperCase() + requestPath + body;
     return crypto.createHmac('sha256', this.secretKey).update(message).digest('base64');
   }
 
   private getHeaders(method: string, requestPath: string, body: string = '') {
-    const timestamp = Date.now() / 1000; // Unix timestamp in seconds
-    const signature = this.createSignature(timestamp.toString(), method, requestPath, body);
+    const timestamp = Date.now() / 1000;
+    const timestampStr = timestamp.toFixed(3); // OKX requires 3 decimal places
+    const signature = this.createSignature(timestampStr, method, requestPath, body);
 
     return {
       'OK-ACCESS-KEY': this.apiKey,
       'OK-ACCESS-SIGN': signature,
-      'OK-ACCESS-TIMESTAMP': timestamp.toString(),
+      'OK-ACCESS-TIMESTAMP': timestampStr,
       'OK-ACCESS-PASSPHRASE': this.passphrase,
       'Content-Type': 'application/json',
     };
