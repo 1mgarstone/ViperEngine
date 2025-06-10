@@ -134,22 +134,42 @@ export default function Dashboard() {
   // Start VIPER bot mutation
   const startViper = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/viper/start', {
+      const response = await fetch('/api/viper-control/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      if (!response.ok) throw new Error('Failed to start VIPER bot');
-      return response.json();
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        if (data.balanceInsufficient) {
+          throw new Error(`Insufficient USDT balance for live trading. Current: ${data.currentBalance} USDT, Required: ${data.minimumRequired} USDT`);
+        }
+        throw new Error(data.error || 'Failed to start VIPER bot');
+      }
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/viper-status'] });
+      toast({
+        title: "VIPER Bot Started",
+        description: "Autonomous trading has begun",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Start Bot",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   });
 
   // Stop VIPER bot mutation
   const stopViper = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/viper/stop', {
+      const response = await fetch('/api/viper-control/stop', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -158,6 +178,10 @@ export default function Dashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/viper-status'] });
+      toast({
+        title: "VIPER Bot Stopped",
+        description: "Autonomous trading has been stopped",
+      });
     }
   });
 

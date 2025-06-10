@@ -391,6 +391,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const action = req.params.action;
       
       if (action === "start") {
+        // Check if user is in live mode and validate balance
+        const user = await storage.getUser(1); // Assuming userId 1 for demo
+        
+        if (user?.isLiveMode) {
+          // Validate minimum balance for live trading
+          const currentBalance = parseFloat(user.liveBalance || "0");
+          const minimumRequired = 10;
+          
+          if (currentBalance < minimumRequired) {
+            return res.status(400).json({
+              error: `Insufficient USDT balance for live trading. Current: ${currentBalance.toFixed(2)} USDT, Required: ${minimumRequired} USDT`,
+              currentBalance,
+              minimumRequired,
+              balanceInsufficient: true
+            });
+          }
+        }
+        
         globalViperEngine.startAutonomousTrading();
         res.json({ 
           success: true, 
@@ -660,7 +678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (isLive) {
-        // Import OKX client for balance validation
+        // Import OKX client for balance fetching
         const { OKXClient } = await import('./okx-client');
         const okxClient = new OKXClient(
           process.env.OKX_API_KEY!,
@@ -668,21 +686,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           process.env.OKX_PASSPHRASE!
         );
 
-        // Validate minimum balance requirement
-        const balanceValidation = await okxClient.validateMinimumBalance(10);
+        // Fetch current balance without validation
+        const balanceResult = await okxClient.getAccountBalance();
         
-        if (!balanceValidation.valid) {
+        if (!balanceResult.success) {
           return res.status(400).json({
-            error: balanceValidation.error || "Insufficient USDT balance for live trading",
-            currentBalance: balanceValidation.balance,
-            minimumRequired: 10,
-            hasCredentials: true,
-            balanceInsufficient: true
+            error: balanceResult.error || "Failed to connect to OKX account",
+            hasCredentials: true
           });
         }
 
-        // Update live balance from OKX
-        await storage.updateCurrentBalance(userId, balanceValidation.balance.toFixed(8));
+        // Update live balance from OKX (allow any balance amount)
+        await storage.updateCurrentBalance(userId, balanceResult.usdtBalance.toFixed(8));
 
         // Update user credentials
         await storage.updateUserExchangeCredentials(
@@ -693,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           "okx"
         );
 
-        console.log(`Live mode enabled with ${balanceValidation.balance} USDT balance`);
+        console.log(`Live mode enabled with ${balanceResult.usdtBalance} USDT balance`);
       }
 
       // Toggle live mode
