@@ -189,6 +189,32 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     },
   });
 
+  // Toggle Demo/Live trading mode
+  const toggleLiveModeMutation = useMutation({
+    mutationFn: async () => {
+      const newMode = !userData?.isLiveMode;
+      return await fetch(`/api/user/${userId}/toggle-live-mode`, {
+        method: "POST",
+        body: JSON.stringify({ isLive: newMode }),
+        headers: { "Content-Type": "application/json" }
+      }).then(res => res.json());
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
+      toast({
+        title: "Trading Mode Switched",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to switch trading mode",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSaveSettings = () => {
     const settingsData = {
       userId,
@@ -210,6 +236,10 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
 
   const handleStartStop = (action: "start" | "stop") => {
     controlTradingMutation.mutate(action);
+  };
+
+  const handleToggleLiveMode = () => {
+    toggleLiveModeMutation.mutate();
   };
 
   const isRunning = viperStatus?.isRunning || false;

@@ -65,8 +65,8 @@ export class ViperEngine {
 
       const currentBalance = parseFloat(user.paperBalance);
       
-      // Only reset to $10.00 if balance is 0 or unreasonably high (indicating fresh start)
-      if (currentBalance === 0 || currentBalance > 10000) {
+      // Only reset to $10.00 if balance is 0 (never auto-reset high balances)
+      if (currentBalance === 0) {
         await storage.updateUserBalance(this.userId, "10.00");
         console.log("🔄 Demo Reset: Starting systematic trading progression from $10.00 USDT");
       } else {
@@ -443,11 +443,9 @@ export class ViperEngine {
     
     const balance = parseFloat(user.paperBalance);
     
-    // ABSOLUTE BALANCE PROTECTION - Never allow balance to go below $150 USDT
-    if (balance < 150) {
-      // Emergency balance restoration to prevent any negative scenarios
-      await storage.updateUserBalance(this.userId, "200.00000000");
-      return;
+    // Balance check for trade execution
+    if (balance < 5) {
+      return; // Skip trading if balance is too low
     }
     
     // Enhanced profit-only position sizing
