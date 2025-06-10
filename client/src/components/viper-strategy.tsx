@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign, RotateCcw, Scan, Eye } from "lucide-react";
+import { Zap, Target, Shield, TrendingUp, Activity, Play, Square, DollarSign, RotateCcw, Scan, Eye, Search } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -108,11 +108,18 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
 
   // Live/Demo mode toggle mutation
   const toggleLiveMode = useMutation({
-    mutationFn: async (isLive: boolean) => 
-      apiRequest(`/api/user/${userId}/toggle-live-mode`, {
+    mutationFn: async (isLive: boolean) => {
+      const response = await fetch(`/api/user/${userId}/toggle-live-mode`, {
         method: 'POST',
-        body: { isLive }
-      }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isLive })
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to toggle mode');
+      }
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
       toast({ description: "Trading mode updated successfully" });
@@ -127,14 +134,24 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
 
   // Demo restart mutation
   const restartDemo = useMutation({
-    mutationFn: () => apiRequest('/api/restart-demo', { method: 'POST' }),
+    mutationFn: async () => {
+      const response = await fetch('/api/restart-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to restart demo');
+      }
+      return response.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
       toast({ description: "Demo restarted with $10.00 USDT" });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({ 
-        description: "Failed to restart demo",
+        description: error.message || "Failed to restart demo",
         variant: "destructive" 
       });
     }
@@ -380,13 +397,13 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
             <div className="p-4 bg-gray-700/50 border border-gray-600 rounded-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className={`w-3 h-3 rounded-full ${(userData as any)?.isLiveMode ? 'bg-red-500' : 'bg-blue-400'}`}></div>
+                  <div className={`w-3 h-3 rounded-full ${(userTradingData as any)?.isLiveMode ? 'bg-red-500' : 'bg-blue-400'}`}></div>
                   <div>
                     <div className="text-white font-medium">
-                      {(userData as any)?.isLiveMode ? 'LIVE Trading Mode' : 'Demo Trading Mode'}
+                      {(userTradingData as any)?.isLiveMode ? 'LIVE Trading Mode' : 'Demo Trading Mode'}
                     </div>
                     <div className="text-sm text-gray-300">
-                      {(userData as any)?.isLiveMode 
+                      {(userTradingData as any)?.isLiveMode 
                         ? 'Trading with real USDT on OKX exchange' 
                         : 'Systematic progression with realistic market simulation'
                       }
@@ -396,12 +413,12 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
                 <Button
                   onClick={() => handleToggleLiveMode()}
                   disabled={toggleLiveModeMutation.isPending}
-                  className={`${(userData as any)?.isLiveMode 
+                  className={`${(userTradingData as any)?.isLiveMode 
                     ? 'bg-blue-600 hover:bg-blue-700' 
                     : 'bg-red-600 hover:bg-red-700'
                   } text-white font-bold px-4 py-2`}
                 >
-                  Switch to {(userData as any)?.isLiveMode ? 'DEMO' : 'LIVE'}
+                  Switch to {(userTradingData as any)?.isLiveMode ? 'DEMO' : 'LIVE'}
                 </Button>
               </div>
             </div>
@@ -595,6 +612,133 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
               <div className="text-gray-500 text-sm">Start the VIPER bot to begin trading</div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Balance Tracker */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center space-x-2">
+            <DollarSign className="h-5 w-5 text-green-400" />
+            <span>Balance Tracker</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <div className="text-gray-400 text-sm">Current Balance</div>
+              <div className="text-white text-2xl font-mono">
+                ${currentBalance.toFixed(2)} USDT
+              </div>
+              <div className={`text-sm ${(userTradingData as any)?.isLiveMode ? 'text-red-400' : 'text-blue-400'}`}>
+                {(userTradingData as any)?.isLiveMode ? 'LIVE Trading' : 'Demo Mode'}
+              </div>
+            </div>
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <div className="text-gray-400 text-sm">Total Profit</div>
+              <div className={`text-2xl font-mono ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                ${totalProfit >= 0 ? '+' : ''}${totalProfit.toFixed(2)} USDT
+              </div>
+              <div className={`text-sm ${profitPercentage >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {profitPercentage >= 0 ? '+' : ''}{profitPercentage.toFixed(2)}%
+              </div>
+            </div>
+            <div className="bg-gray-700/50 rounded-lg p-4">
+              <div className="text-gray-400 text-sm">VIPER Enabled</div>
+              <div className="text-white text-lg">
+                {currentBalance >= 200 ? 'YES' : 'NO'}
+              </div>
+              <div className="text-sm text-gray-400">
+                {currentBalance >= 200 
+                  ? 'Liquidation trading active' 
+                  : `Need $${(200 - currentBalance).toFixed(2)} more`
+                }
+              </div>
+            </div>
+          </div>
+          
+          {!(userTradingData as any)?.isLiveMode && (
+            <div className="mt-4">
+              <Button
+                onClick={() => restartDemo.mutate()}
+                disabled={restartDemo.isPending}
+                variant="outline"
+                className="w-full text-blue-400 border-blue-400 hover:bg-blue-400/10"
+              >
+                {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($10.00 USDT)'}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Market Overview */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center space-x-2">
+            <TrendingUp className="h-5 w-5 text-blue-400" />
+            <span>Market Overview</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {assetsData && Array.isArray(assetsData) && assetsData.map((asset: any) => (
+              <div key={asset.id} className="bg-gray-700/50 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white font-medium">{asset.symbol}</span>
+                  <span className={`text-sm px-2 py-1 rounded ${
+                    parseFloat(asset.change24h) >= 0 
+                      ? 'bg-green-500/20 text-green-400' 
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {parseFloat(asset.change24h) >= 0 ? '+' : ''}{parseFloat(asset.change24h).toFixed(2)}%
+                  </span>
+                </div>
+                <div className="text-gray-300 text-lg font-mono">
+                  ${parseFloat(asset.price).toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Liquidation Scanner */}
+      <Card className="bg-gray-800 border-gray-700">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center space-x-2">
+            <Search className="h-5 w-5 text-red-400" />
+            <span>Liquidation Scanner</span>
+            <Badge className={`${viperStatus?.isRunning ? 'bg-green-500' : 'bg-gray-500'}`}>
+              {viperStatus?.isRunning ? 'SCANNING' : 'STANDBY'}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-orange-600/10 border border-orange-500/30 rounded-lg p-4">
+                <div className="text-orange-400 text-sm">Clusters Detected</div>
+                <div className="text-white text-2xl font-mono">{viperStatus?.cycleCount || 0}</div>
+                <div className="text-gray-400 text-sm">Scanning for liquidations</div>
+              </div>
+              <div className="bg-green-600/10 border border-green-500/30 rounded-lg p-4">
+                <div className="text-green-400 text-sm">Strike Success</div>
+                <div className="text-white text-2xl font-mono">
+                  {((viperStatus?.successRate || 0) * 100).toFixed(1)}%
+                </div>
+                <div className="text-gray-400 text-sm">Profitable trades</div>
+              </div>
+            </div>
+            
+            <Alert className="border-orange-500/30 bg-orange-500/10">
+              <AlertDescription className="text-orange-300 text-sm">
+                <strong>Liquidation Detection:</strong> Continuously scanning for large liquidation clusters.
+                When clusters ≥$10,000 are detected, VIPER Strike executes high-leverage counter-trades
+                for maximum profit extraction.
+              </AlertDescription>
+            </Alert>
+          </div>
         </CardContent>
       </Card>
 
