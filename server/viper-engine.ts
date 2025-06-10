@@ -44,6 +44,7 @@ export class ViperEngine {
   private profitOptimizer: Map<string, ProfitOptimizer> = new Map();
   private marketAnalysis: Map<string, any> = new Map();
   private tradingTimeout: NodeJS.Timeout | null = null;
+  private allTimeouts: Set<NodeJS.Timeout> = new Set();
   
   // Systematic trading progression state
   private microTradeEnabled: boolean = true;
@@ -343,10 +344,19 @@ export class ViperEngine {
 
   stopAutonomousTrading(): void {
     this.autoTradingState.isRunning = false;
+    
+    // Clear all timeouts to prevent hanging processes
     if (this.tradingTimeout) {
       clearTimeout(this.tradingTimeout);
       this.tradingTimeout = null;
     }
+    
+    // Clear all registered timeouts
+    this.allTimeouts.forEach(timeout => {
+      clearTimeout(timeout);
+    });
+    this.allTimeouts.clear();
+    
     console.log('⏹️ VIPER Autonomous Trading: STOPPED');
   }
 
@@ -408,6 +418,7 @@ export class ViperEngine {
     // Schedule next cycle only if still running (every 1 second for ultra-rapid execution)
     if (this.autoTradingState.isRunning) {
       this.tradingTimeout = setTimeout(() => this.runTradingCycle(), 1000);
+      this.allTimeouts.add(this.tradingTimeout);
     }
   }
 
