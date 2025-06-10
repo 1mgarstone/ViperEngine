@@ -72,11 +72,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }, 3000);
 
-    // VIPER Strategy processing every 5 seconds
+    // VIPER Strategy processing every 5 seconds with balance broadcasting
     const viperUpdateInterval = setInterval(async () => {
       try {
         if (viperEngine.isEnabled()) {
           await viperEngine.processAutomatedTradingCycle();
+          
+          // Broadcast updated balance after trading cycle
+          const user = await storage.getUser(1);
+          if (user && ws.readyState === WebSocket.OPEN) {
+            const currentBalance = parseFloat(user.paperBalance);
+            ws.send(JSON.stringify({
+              type: 'balance_update',
+              data: {
+                balance: currentBalance,
+                profit: currentBalance - 100,
+                profitPercentage: ((currentBalance - 100) / 100) * 100
+              }
+            }));
+          }
         }
       } catch (error) {
         console.error('Error in VIPER processing:', error);
