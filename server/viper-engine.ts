@@ -462,7 +462,7 @@ export class ViperEngine {
 
   getMicroTradeStatus(): { enabled: boolean; intensity: number; activeTrades: number } {
     return { 
-      enabled: this.microTradeSettings.enabled, 
+      enabled: true, // Always enabled in both demo and live
       intensity: this.microTradeSettings.intensity, 
       activeTrades: 0 
     };
