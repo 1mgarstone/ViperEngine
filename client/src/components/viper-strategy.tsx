@@ -253,7 +253,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   };
 
   const isRunning = viperStatus?.isRunning || false;
-  const activeTrades = tradesData?.filter((t: any) => t.status === 'open')?.length || 0;
+  const activeTrades = Array.isArray(tradesData) ? tradesData.filter((t: any) => t.status === 'open').length : 0;
 
   return (
     <div className="space-y-6 pb-20">
@@ -502,7 +502,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {tradesData && tradesData.length > 0 ? (
+          {Array.isArray(tradesData) && tradesData.length > 0 ? (
             <div className="space-y-3">
               {tradesData.filter((trade: any) => trade.status === 'open').map((trade: any) => (
                 <div key={trade.id} className="bg-gray-700 rounded-lg p-4">

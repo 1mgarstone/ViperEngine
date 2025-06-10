@@ -50,6 +50,7 @@ export interface IStorage {
 
   // Viper settings operations
   getViperSettings(userId: number): Promise<ViperSettings | undefined>;
+  createViperSettings(settings: InsertViperSettings): Promise<ViperSettings>;
   updateViperSettings(settings: InsertViperSettings): Promise<ViperSettings>;
 
   // Liquidation cluster operations
@@ -448,6 +449,27 @@ export class MemStorage implements IStorage {
     return Array.from(this.viperSettings.values()).find(
       settings => settings.userId === userId
     );
+  }
+
+  async createViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
+    const id = this.currentViperSettingsId++;
+    const newSettings: ViperSettings = {
+      id,
+      userId: insertSettings.userId,
+      maxLeverage: insertSettings.maxLeverage || 125,
+      volThreshold: insertSettings.volThreshold || "0.00800",
+      strikeWindow: insertSettings.strikeWindow || "0.170",
+      profitTarget: insertSettings.profitTarget || "2.00",
+      stopLoss: insertSettings.stopLoss || "0.100",
+      clusterThreshold: insertSettings.clusterThreshold || "0.00500",
+      positionScaling: insertSettings.positionScaling || "1.00",
+      maxConcurrentTrades: insertSettings.maxConcurrentTrades || 2,
+      balanceMultiplier: insertSettings.balanceMultiplier || "2.00",
+      isEnabled: insertSettings.isEnabled || false,
+      updatedAt: new Date(),
+    };
+    this.viperSettings.set(id, newSettings);
+    return newSettings;
   }
 
   async updateViperSettings(insertSettings: InsertViperSettings): Promise<ViperSettings> {
