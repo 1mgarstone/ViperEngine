@@ -41,19 +41,22 @@ app.use((req, res, next) => {
   
   // Initialize OKX API credentials for live trading
   try {
+    // Set environment variables with the provided credentials
+    process.env.OKX_API_KEY = "28e69e1b-afca-42d8-929b-0620bfca8f0d";
+    process.env.OKX_SECRET_KEY = "8C6E7C310C14936F1C910CA518FA840F";
+    process.env.OKX_PASSPHRASE = "1%Viperstrike";
+    
     const { storage } = await import("./storage");
-    if (process.env.OKX_API_KEY && process.env.OKX_SECRET_KEY && process.env.OKX_PASSPHRASE) {
-      await storage.updateUserExchangeCredentials(
-        1, // Default user ID
-        process.env.OKX_API_KEY,
-        process.env.OKX_SECRET_KEY,
-        process.env.OKX_PASSPHRASE,
-        "okx"
-      );
-      console.log("✅ OKX API credentials configured for live trading");
-    }
+    await storage.updateUserExchangeCredentials(
+      1, // Default user ID
+      process.env.OKX_API_KEY,
+      process.env.OKX_SECRET_KEY,
+      process.env.OKX_PASSPHRASE,
+      "okx"
+    );
+    console.log("✅ OKX API credentials configured for live trading");
   } catch (error) {
-    console.log("⚠️ OKX credentials not configured:", error.message);
+    console.log("⚠️ OKX credentials not configured:", (error as Error).message);
   }
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -98,7 +98,7 @@ export class OKXClient {
         headers: {
           'OK-ACCESS-KEY': headers['OK-ACCESS-KEY'].substring(0, 8) + '...',
           'OK-ACCESS-TIMESTAMP': headers['OK-ACCESS-TIMESTAMP'],
-          'OK-ACCESS-PASSPHRASE': headers['OK-ACCESS-PASSPHRASE'].substring(0, 4) + '...',
+          'OK-ACCESS-PASSPHRASE': `"${headers['OK-ACCESS-PASSPHRASE']}"`,
           'OK-ACCESS-SIGN': headers['OK-ACCESS-SIGN'].substring(0, 10) + '...'
         }
       });
