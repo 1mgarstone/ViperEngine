@@ -649,23 +649,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = parseInt(req.params.userId);
       
+      // Check if OKX credentials are available in environment
+      if (!process.env.OKX_API_KEY || !process.env.OKX_SECRET_KEY || !process.env.OKX_PASSPHRASE) {
+        return res.status(400).json({ 
+          error: "OKX API credentials not configured in environment",
+          hasCredentials: false 
+        });
+      }
+      
       // Update user with OKX API credentials from environment
       const updatedUser = await storage.updateUserExchangeCredentials(
         userId,
-        process.env.OKX_API_KEY || "",
-        process.env.OKX_SECRET_KEY || "",
-        process.env.OKX_PASSPHRASE || "",
+        process.env.OKX_API_KEY,
+        process.env.OKX_SECRET_KEY,
+        process.env.OKX_PASSPHRASE,
         "okx"
       );
 
       res.json({
         success: true,
-        message: "Exchange credentials updated successfully",
+        message: "OKX API credentials configured for live trading",
         exchangeName: "OKX",
-        hasCredentials: !!(process.env.OKX_API_KEY && process.env.OKX_SECRET_KEY && process.env.OKX_PASSPHRASE)
+        hasCredentials: true,
+        apiKeyPreview: process.env.OKX_API_KEY.substring(0, 8) + "..."
       });
-    } catch (error) {
-      console.error("Failed to update exchange credentials:", error);
+    } catch (error: any) {
+      console.error("Failed to update exchange credentials:", error.message);
       res.status(500).json({ error: "Failed to update exchange credentials" });
     }
   });

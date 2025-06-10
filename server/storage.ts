@@ -1053,6 +1053,25 @@ export class DatabaseStorage implements IStorage {
     if (!updated) throw new Error("User not found");
     return updated;
   }
+
+  async updateUserExchangeCredentials(userId: number, apiKey: string, secretKey: string, passphrase: string, exchangeName: string): Promise<User> {
+    await this.initializeDefaultData();
+    
+    const [updated] = await db
+      .update(users)
+      .set({
+        apiKey,
+        apiSecret: secretKey,
+        apiPassphrase: passphrase,
+        exchangeName,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updated) throw new Error("User not found");
+    return updated;
+  }
 }
 
 // Use DatabaseStorage for permanent persistence across restarts
