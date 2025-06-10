@@ -100,6 +100,35 @@ export default function Dashboard() {
     }
   });
 
+  // Live mode toggle mutation
+  const toggleLiveMode = useMutation({
+    mutationFn: async (isLive: boolean) => {
+      const response = await fetch(`/api/user/1/toggle-live-mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isLive })
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        if (data.balanceInsufficient) {
+          throw new Error(`Insufficient OKX balance: ${data.currentBalance} USDT (minimum: ${data.minimumRequired} USDT required)`);
+        }
+        throw new Error(data.error || 'Failed to toggle trading mode');
+      }
+      
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user/1'] });
+      console.log(`Switched to ${data.mode} mode with ${data.balance} USDT`);
+    },
+    onError: (error: Error) => {
+      console.error('Live mode toggle failed:', error.message);
+    }
+  });
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "dashboard":
@@ -181,8 +210,7 @@ export default function Dashboard() {
 
                 <div className="text-xs text-orange-200 leading-relaxed">
                   <strong>Systematic Trading Progression:</strong><br/>
-                  Phase 1: Micro-trading only ($10 → $200)<br/>
-                  Phase 2: Combined strategies ($200+)
+                  Intelligent micro-trading with automatic VIPER activation at $200 threshold
                 </div>
               </CardContent>
             </Card>
