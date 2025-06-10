@@ -625,20 +625,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset balance to $10.00 USDT
       await storage.updateUserBalance(userId, "10.00");
       
-      // Reset VIPER settings if they exist
-      const existingSettings = await storage.getViperSettings(userId);
-      if (existingSettings) {
-        await storage.updateViperSettings(userId, {
-          userId: userId,
-          isEnabled: false,
-          maxLeverage: 50,
-          profitTarget: "2.0",
-          stopLoss: "1.0",
-          maxConcurrentTrades: 1,
-          balanceMultiplier: "3.0",
-          positionScaling: "1.0"
-        });
-      }
+      // Reset VIPER settings - skip for now to avoid database constraints
+      console.log('VIPER settings reset skipped to avoid DB constraints');
 
       // Clear all active trades
       const activeTrades = await storage.getUserViperTrades(userId);
