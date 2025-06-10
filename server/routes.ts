@@ -440,13 +440,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const user = await storage.getUser(1); // Assuming userId 1 for demo
         
         if (user?.isLiveMode) {
-          // Validate minimum balance for live trading
+          // Validate minimum balance for live trading - adjusted for micro-trading
           const currentBalance = parseFloat(user.liveBalance || "0");
-          const minimumRequired = 10;
+          const minimumRequired = 0.001; // Lowered for micro-balance trading
           
           if (currentBalance < minimumRequired) {
             return res.status(400).json({
-              error: `Insufficient USDT balance for live trading. Current: ${currentBalance.toFixed(2)} USDT, Required: ${minimumRequired} USDT`,
+              error: `Insufficient USDT balance for live trading. Current: ${currentBalance.toFixed(8)} USDT, Required: ${minimumRequired} USDT`,
               currentBalance,
               minimumRequired,
               balanceInsufficient: true
