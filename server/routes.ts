@@ -667,8 +667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = 1; // Demo user ID for the trading simulation
 
-      // Reset balance to $10.00 USDT
-      await storage.updateUserBalance(userId, "10.00");
+      // Reset balance to $100.00 USDT
+      await storage.updateUserBalance(userId, "100.00");
       
       // Reset VIPER settings - skip for now to avoid database constraints
       console.log('VIPER settings reset skipped to avoid DB constraints');
@@ -687,9 +687,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true, 
         message: "Demo restarted successfully - Balance and P&L reset",
-        balance: "10.00",
+        balance: "100.00",
         totalPnL: "0.00",
-        phase: "Phase 1: Micro-trading only ($10 → $200)"
+        phase: "Phase 1: Enhanced micro-trading ($100 → $200)"
       });
     } catch (error) {
       console.error("Demo restart error:", error);
