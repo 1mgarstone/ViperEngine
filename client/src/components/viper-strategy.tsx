@@ -177,7 +177,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/user/${userId}`] });
-      toast({ description: "Demo restarted with $10.00 USDT" });
+      toast({ description: "Demo restarted with $100.00 USDT" });
     },
     onError: (error: any) => {
       toast({ 
@@ -191,7 +191,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
   const currentBalance = userTradingData?.isLiveMode 
     ? parseFloat(userTradingData.liveBalance) 
     : parseFloat(userTradingData?.paperBalance || '0');
-  const startBalance = userTradingData?.isLiveMode ? 10 : 10;
+  const startBalance = 100; // Both demo and live start at $100 USDT
   const totalProfit = currentBalance - startBalance;
   const profitPercentage = startBalance > 0 ? (totalProfit / startBalance) * 100 : 0;
 
@@ -695,7 +695,7 @@ export function ViperStrategy({ userId }: ViperStrategyProps) {
                 variant="outline"
                 className="w-full text-blue-400 border-blue-400 hover:bg-blue-400/10"
               >
-                {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($10.00 USDT)'}
+                {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($100.00 USDT)'}
               </Button>
             </div>
           )}

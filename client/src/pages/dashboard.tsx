@@ -293,7 +293,7 @@ export default function Dashboard() {
                       className="w-full bg-orange-600/20 border-orange-500 text-orange-100 hover:bg-orange-600/30"
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
-                      {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($10.00 USDT)'}
+                      {restartDemo.isPending ? 'Restarting...' : 'Restart Demo ($100.00 USDT)'}
                     </Button>
                   )}
                 </div>
