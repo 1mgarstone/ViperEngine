@@ -634,13 +634,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ 
         success: true, 
-        message: "Demo restarted successfully",
+        message: "Demo restarted successfully - Balance and P&L reset",
         balance: "10.00",
+        totalPnL: "0.00",
         phase: "Phase 1: Micro-trading only ($10 → $200)"
       });
     } catch (error) {
       console.error("Demo restart error:", error);
       res.status(500).json({ error: "Failed to restart demo" });
+    }
+  });
+
+  // Toggle Demo/Live trading mode
+  app.post("/api/user/:userId/toggle-live-mode", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { isLive } = req.body;
+
+      // Check if OKX credentials are configured for live mode
+      if (isLive && (!process.env.OKX_API_KEY || !process.env.OKX_SECRET_KEY || !process.env.OKX_PASSPHRASE)) {
+        return res.status(400).json({ 
+          error: "OKX API credentials required for live trading",
+          hasCredentials: false 
+        });
+      }
+
+      // Update user to live mode and configure credentials if switching to live
+      if (isLive) {
+        await storage.updateUserExchangeCredentials(
+          userId,
+          process.env.OKX_API_KEY!,
+          process.env.OKX_SECRET_KEY!,
+          process.env.OKX_PASSPHRASE!,
+          "okx"
+        );
+      }
+
+      // Toggle live mode
+      const updatedUser = await storage.toggleLiveMode(userId, isLive);
+
+      res.json({
+        success: true,
+        message: isLive ? "Switched to LIVE trading mode with real USDT" : "Switched to DEMO trading mode",
+        mode: isLive ? "LIVE" : "DEMO",
+        exchangeName: isLive ? "OKX" : null,
+        isLiveMode: updatedUser.isLiveMode,
+        balance: isLive ? updatedUser.liveBalance : updatedUser.paperBalance
+      });
+    } catch (error: any) {
+      console.error("Failed to toggle live mode:", error.message);
+      res.status(500).json({ error: "Failed to toggle trading mode" });
     }
   });
 
