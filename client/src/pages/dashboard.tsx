@@ -146,9 +146,20 @@ export default function Dashboard() {
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <div className="text-xs text-orange-100">Live Balance</div>
+                    <div className="text-xs text-orange-100 flex items-center space-x-2">
+                      <span>Balance</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        userData?.isLiveMode 
+                          ? 'bg-red-600/20 text-red-300 border border-red-500/30' 
+                          : 'bg-orange-600/20 text-orange-300 border border-orange-500/30'
+                      }`}>
+                        {userData?.isLiveMode ? 'LIVE' : 'DEMO'}
+                      </span>
+                    </div>
                     <div className="font-mono text-lg text-white">${currentBalance.toFixed(2)} USDT</div>
-                    <div className="text-xs text-orange-200">Start: $10.00</div>
+                    <div className="text-xs text-orange-200">
+                      {userData?.isLiveMode ? 'OKX Live Account' : 'Demo Simulation'}
+                    </div>
                     {totalProfit !== 0 && (
                       <div className={`text-xs font-medium ${totalProfit > 0 ? 'text-green-300' : 'text-red-300'}`}>
                         {totalProfit > 0 ? '+' : ''}${totalProfit.toFixed(2)} Total Profit
