@@ -229,26 +229,25 @@ export class ViperEngine {
       
       console.log(`Trading cycle ${this.autoTradingState.cycleCount}: Balance $${currentBalance.toFixed(2)} (${user.isLiveMode ? 'LIVE' : 'DEMO'})`);
 
-      // VIPER Strike Progression Logic - Starting at $100 USDT
+      // VIPER Strike Authentic Trading - Starting at $100 USDT
       if (currentBalance >= 100 && currentBalance < 150) {
-        // Phase 1: VIPER Strike Initial ($100-$150) - Aggressive liquidation hunting
+        // Phase 1: VIPER Strike Initial ($100-$150) - Authentic OKX execution
         console.log(`VIPER Strike Phase 1: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.08).toFixed(2)} position size`);
-        await this.executeViperStrikeLiquidation(currentBalance, user.isLiveMode);
-        await this.executeIntelligentMicroTrading(currentBalance, user.isLiveMode);
+        await this.executeAuthenticViperStrike(currentBalance, false); // Always use authentic execution
+        await this.executeAuthenticMicroTrading(currentBalance, false);
       } else if (currentBalance >= 150 && currentBalance < 300) {
-        // Phase 2: VIPER Strike Enhanced ($150-$300) - Higher leverage liquidation
+        // Phase 2: VIPER Strike Enhanced ($150-$300) - Higher leverage authentic trades
         console.log(`VIPER Strike Phase 2: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.12).toFixed(2)} position size`);
-        await this.executeViperStrikeLiquidation(currentBalance, user.isLiveMode);
-        await this.executeIntelligentMicroTrading(currentBalance, user.isLiveMode);
+        await this.executeAuthenticViperStrike(currentBalance, false);
+        await this.executeAuthenticMicroTrading(currentBalance, false);
       } else if (currentBalance >= 300) {
-        // Phase 3: VIPER Strike Advanced ($300+) - Maximum profit liquidation
+        // Phase 3: VIPER Strike Advanced ($300+) - Maximum leverage authentic trades
         console.log(`VIPER Strike Phase 3: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.15).toFixed(2)} position size`);
-        await this.executeViperStrikeLiquidation(currentBalance, user.isLiveMode);
-        await this.executeIntelligentMicroTrading(currentBalance, user.isLiveMode);
+        await this.executeAuthenticViperStrike(currentBalance, false);
+        await this.executeAuthenticMicroTrading(currentBalance, false);
       } else if (currentBalance < 100) {
-        console.log(`Recovery trading analysis: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.05).toFixed(2)} position size`);
-        // Enhanced recovery trading for balances under $100
-        await this.executeRecoveryTrading(currentBalance, user.isLiveMode);
+        console.log(`Recovery mode: $${currentBalance.toFixed(2)} balance, $${(currentBalance * 0.05).toFixed(2)} position size`);
+        await this.executeAuthenticRecoveryTrading(currentBalance, false);
       }
 
       // Update performance metrics based on actual trades
