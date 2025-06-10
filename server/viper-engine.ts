@@ -32,6 +32,7 @@ export class ViperEngine {
     profitability: 0,
     successRate: 0
   };
+  private microTradeSettings: { enabled: boolean; intensity: number } = { enabled: false, intensity: 50 };
 
   constructor(userId: number) {
     this.userId = userId;
@@ -41,6 +42,13 @@ export class ViperEngine {
     try {
       const settings = await storage.getViperSettings(this.userId);
       this.settings = settings;
+      
+      // Load micro-trade settings from database or use defaults
+      const savedMicroSettings = await this.loadMicroTradeSettings();
+      if (savedMicroSettings) {
+        this.microTradeSettings = savedMicroSettings;
+      }
+      
       console.log('VIPER Engine initialized with authentic trading only');
     } catch (error) {
       console.error('Failed to initialize VIPER engine:', error);
